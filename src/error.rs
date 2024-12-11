@@ -37,9 +37,11 @@ impl From<PluginError> for OxiError {
     }
 }
 
-
 #[derive(Debug)]
 pub enum JustError {
+    LettreError(lettre::error::Error), // Already implemented for nvim_oxi::Error
+    LettreAddrError(lettre::address::AddressError), // Already implemented for nvim_oxi::Error
+    LettreTrError(<lettre::transport::smtp::SmtpTransport as lettre::transport::Transport>::Error),
     NvimError(nvim_oxi::Error), // Already implemented for nvim_oxi::Error
     ApiError(nvim_oxi::api::Error), // New variant for nvim_oxi::api::Error
     IoError(std::io::Error),
@@ -49,6 +51,9 @@ pub enum JustError {
 impl std::fmt::Display for JustError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            JustError::LettreError(err) => write!(f, "Lettre Error: {}", err),
+            JustError::LettreAddrError(err) => write!(f, "Lettre Address Error: {}", err),
+            JustError::LettreTrError(err) => write!(f, "Lettre Trasnsport Error: {}", err),
             JustError::NvimError(err) => write!(f, "Neovim Error: {}", err),
             JustError::ApiError(err) => write!(f, "API Error: {}", err),
             JustError::IoError(err) => write!(f, "IO Error: {}", err),
@@ -59,13 +64,32 @@ impl std::fmt::Display for JustError {
 
 impl std::error::Error for JustError {}
 
+impl From<lettre::transport::smtp::Error> for JustError {
+    fn from(err: lettre::transport::smtp::Error) -> Self {
+        JustError::LettreTrError(err)
+    }
+}
+
+impl From<lettre::error::Error> for JustError {
+    fn from(value: lettre::error::Error) -> Self {
+        JustError::LettreError(value)
+    }
+}
+
+impl From<lettre::address::AddressError> for JustError {
+    fn from(value: lettre::address::AddressError) -> Self {
+        JustError::LettreAddrError(value)
+    }
+}
+
 impl From<nvim_oxi::Error> for JustError {
     fn from(err: nvim_oxi::Error) -> Self {
         JustError::NvimError(err)
     }
 }
 
-impl From<nvim_oxi::api::Error> for JustError { // Implement From for api::Error
+impl From<nvim_oxi::api::Error> for JustError {
+    // Implement From for api::Error
     fn from(err: nvim_oxi::api::Error) -> Self {
         JustError::ApiError(err)
     }

@@ -1,4 +1,5 @@
 #![allow(clippy::arc_with_non_send_sync)]
+#![deny(clippy::unwrap_used, unused_variables)]
 
 use std::sync::{Arc, Mutex};
 
@@ -7,8 +8,8 @@ use nvim_oxi::{
     Dictionary, Error as OxiError, Function, Result as OxiResult,
 };
 
-use error::PluginError;
 use config::Config;
+use error::PluginError;
 
 use self::{
     command::{completion, Command},
@@ -16,10 +17,11 @@ use self::{
 };
 
 mod command;
+mod config;
 mod core;
 mod crypt;
 mod error;
-mod config;
+mod mail;
 
 #[nvim_oxi::plugin]
 fn just() -> OxiResult<Dictionary> {
@@ -52,7 +54,6 @@ fn just() -> OxiResult<Dictionary> {
                 }
                 None => err_writeln(&format!("Unknown command: {}", action)),
             };
-
             Ok(())
         }
     };

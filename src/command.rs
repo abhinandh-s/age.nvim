@@ -4,6 +4,7 @@ use nvim_oxi::Function;
 pub enum Command {
     EncryptFile,
     DecryptFile,
+    SentMail,
     NewFileName(Option<String>),
 }
 
@@ -28,6 +29,7 @@ impl Command {
                 let filename = arg.map(|s| s.to_string());
                 Some(Command::NewFileName(filename))
             }
+            "sent" => Some(Command::SentMail),
             "d" => Some(Command::DecryptFile),
             "e" => Some(Command::EncryptFile),
             "decrypt" => Some(Command::DecryptFile),
@@ -42,7 +44,6 @@ impl Command {
 }
 
 pub fn completion() -> Function<(String, String, usize), Vec<String>> {
-
     Function::from_fn({
         move |args: (String, String, usize)| {
             let (arg_lead, cmd_line, cursor_pos) = args;
@@ -67,10 +68,9 @@ pub fn completion() -> Function<(String, String, usize), Vec<String>> {
             } else {
                 let completions = vec![
                     "new".into(),
-                    "d".into(),
                     "decrypt".into(),
-                    "e".into(),
                     "encrypt".into(),
+                    "sent".into(),
                 ];
                 completions
                     .into_iter()

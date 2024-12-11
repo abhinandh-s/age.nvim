@@ -1,5 +1,3 @@
-#![deny(clippy::unwrap_used)]
-
 use std::{fs, path};
 
 use nvim_oxi::api::opts::BufDeleteOpts;
@@ -8,7 +6,8 @@ use nvim_oxi::{print, Dictionary, Result as OxiResult};
 use crate::command::Command;
 use crate::crypt::decrypt_file;
 use crate::error::JustError;
-use crate::{crypt::encrypt_file, config::Config};
+use crate::mail::sent_mail;
+use crate::{config::Config, crypt::encrypt_file};
 
 #[derive(Debug)]
 pub struct App {
@@ -33,12 +32,26 @@ impl App {
         Ok(())
     }
 
+    pub fn handle_mail(&mut self, _cmd: &Command) -> Result<(), JustError> {
+        let creds = &self.config.mail;
+
+        sent_mail(creds)?;
+        Ok(())
+    }
+
     /// Handles commands issued to the plugin.
     ///
     /// Based on the command and argument passed, the corresponding action (such as
     /// setting the font or closing the window) is performed.
     pub fn handle_command(&mut self, cmd: Command) -> OxiResult<()> {
-        match cmd {
+        match &cmd {
+            Command::SentMail => {
+                let re = self.handle_mail(&cmd);
+                if let Err(err) = re {
+                    print!("{}", err);
+                }
+                Ok(())
+            }
             Command::DecryptFile => {
                 let re = self.decrypt_current_file();
                 if let Err(err) = re {
@@ -54,7 +67,7 @@ impl App {
                 Ok(())
             }
             Command::NewFileName(Some(arg)) => {
-                let re = self.open_age_file(arg);
+                let re = self.open_age_file(arg.to_owned());
                 if let Err(err) = re {
                     print!("{}", err);
                 }
@@ -74,9 +87,9 @@ impl App {
         // quit the buffer and switch to an existing revious one or new Buffer
         // then encrypt the file
         let binding = self.config.public_key.to_string();
-        let public_key = binding.as_str();
+        let _public_key = binding.as_str();
         let prv_binding = self.config.private_key.to_string();
-        let private_key = prv_binding.as_str();
+        let _private_key = prv_binding.as_str();
         let args = arg.trim();
 
         let binding = nvim_oxi::api::get_current_buf().get_name()?;
@@ -114,8 +127,6 @@ impl App {
         //     },
         //     Err(err) => { print!("{err}"); },
         // }
-        print!("{args}");
-        print!("public_key: {public_key}\nprivate_key: {private_key}");
         Ok(())
     }
 
@@ -143,12 +154,6 @@ impl App {
                         }
                         let new_scratch_buf = nvim_oxi::api::create_buf(false, true)?;
                         nvim_oxi::api::set_current_buf(&new_scratch_buf)?;
-                        print!(
-                            "input: {}\noutput: {}\nprivate_key: {}",
-                            &current_file_path.display(),
-                            path::Path::new(new_filename).display(),
-                            private_key
-                        );
                         let opts = BufDeleteOpts::builder()
                             .force(true) // Force deletion, ignoring unsaved changes
                             .build();

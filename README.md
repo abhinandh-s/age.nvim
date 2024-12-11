@@ -59,7 +59,7 @@ Just provides the `:Just` command with the following syntax:
 :Just encrypt
 ```
 
-- Decrypts the currently opened encrypted file, then decrypts it and switches to the decrypted file. 
+- Decrypts the currently opened encrypted file, and switches to the decrypted file. 
 ```vim
 :Just decrypt
 ```
