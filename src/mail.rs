@@ -15,8 +15,8 @@ pub fn sent_mail(creds: &MailConfigs) -> Result<(), JustError> {
         .map(|line| line.to_string())
         .collect();
 
-    let frist_line = &lines[0].trim().to_string();
-    let subject = &lines[1].trim().to_string();
+    let frist_line = &lines[0].trim().to_owned();
+    let subject = &lines[1].trim().to_owned();
     let sep = &lines[2];
 
     let (to, contents) = if !frist_line.as_str().contains("@") && sep != "---" {
@@ -28,7 +28,7 @@ pub fn sent_mail(creds: &MailConfigs) -> Result<(), JustError> {
         print!("invalid format!\n\nName <name@example.com>\nSubject\n---\nbody...");
         return Ok(());
     } else {
-        (&lines[0].trim().to_string(), &lines[3..].join("\n"))
+        (&lines[0].trim().to_owned(), &lines[3..].join("\n"))
     };
 
     let from = &creds.from;

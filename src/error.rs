@@ -112,7 +112,7 @@ impl From<std::io::Error> for JustError {
 
 impl From<&str> for JustError {
     fn from(msg: &str) -> Self {
-        JustError::Other(msg.to_string())
+        JustError::Other(msg.to_owned())
     }
 }
 

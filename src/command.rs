@@ -27,7 +27,7 @@ impl Command {
     pub fn from_str(cmd: &str, arg: Option<&str>) -> Option<Self> {
         match cmd {
             "" => {
-                let filename = arg.map(|s| s.to_string());
+                let filename = arg.map(|s| s.to_owned());
                 Some(Command::NewFileName(filename))
             }
             #[cfg(feature = "mail")]
@@ -36,8 +36,9 @@ impl Command {
             "e" => Some(Command::EncryptFile),
             "decrypt" => Some(Command::DecryptFile),
             "encrypt" => Some(Command::EncryptFile),
+            #[cfg(feature = "dev")]
             "new" => {
-                let filename = arg.map(|s| s.to_string());
+                let filename = arg.map(|s| s.to_owned());
                 Some(Command::NewFileName(filename))
             }
             _ => None,

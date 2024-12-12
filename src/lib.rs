@@ -1,5 +1,4 @@
 #![allow(clippy::arc_with_non_send_sync)]
-#![deny(clippy::unwrap_used, unused_variables)]
 
 use std::sync::{Arc, Mutex};
 
@@ -36,12 +35,12 @@ fn just() -> OxiResult<Dictionary> {
         move |args: CommandArgs| -> OxiResult<()> {
             let binding = match args.args {
                 Some(a) => a,
-                None => "".to_string(),
+                None => "".to_owned(),
             };
 
             let mut split_args = binding.split_whitespace();
-            let action = split_args.next().unwrap_or("").to_string();
-            let argument = split_args.next().map(|s| s.to_string());
+            let action = split_args.next().unwrap_or("").to_owned();
+            let argument = split_args.next().map(|s| s.to_owned());
 
             let command = Command::from_str(&action, argument.as_deref());
 
