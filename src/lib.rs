@@ -21,6 +21,7 @@ mod config;
 mod core;
 mod crypt;
 mod error;
+#[cfg(feature = "mail")]
 mod mail;
 
 #[nvim_oxi::plugin]

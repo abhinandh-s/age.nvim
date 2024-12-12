@@ -39,8 +39,11 @@ impl From<PluginError> for OxiError {
 
 #[derive(Debug)]
 pub enum JustError {
+    #[cfg(feature = "mail")]
     LettreError(lettre::error::Error), // Already implemented for nvim_oxi::Error
+    #[cfg(feature = "mail")]
     LettreAddrError(lettre::address::AddressError), // Already implemented for nvim_oxi::Error
+    #[cfg(feature = "mail")]
     LettreTrError(<lettre::transport::smtp::SmtpTransport as lettre::transport::Transport>::Error),
     NvimError(nvim_oxi::Error), // Already implemented for nvim_oxi::Error
     ApiError(nvim_oxi::api::Error), // New variant for nvim_oxi::api::Error
@@ -51,8 +54,11 @@ pub enum JustError {
 impl std::fmt::Display for JustError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            #[cfg(feature = "mail")]
             JustError::LettreError(err) => write!(f, "Lettre Error: {}", err),
+            #[cfg(feature = "mail")]
             JustError::LettreAddrError(err) => write!(f, "Lettre Address Error: {}", err),
+            #[cfg(feature = "mail")]
             JustError::LettreTrError(err) => write!(f, "Lettre Trasnsport Error: {}", err),
             JustError::NvimError(err) => write!(f, "Neovim Error: {}", err),
             JustError::ApiError(err) => write!(f, "API Error: {}", err),
@@ -64,18 +70,21 @@ impl std::fmt::Display for JustError {
 
 impl std::error::Error for JustError {}
 
+#[cfg(feature = "mail")]
 impl From<lettre::transport::smtp::Error> for JustError {
     fn from(err: lettre::transport::smtp::Error) -> Self {
         JustError::LettreTrError(err)
     }
 }
 
+#[cfg(feature = "mail")]
 impl From<lettre::error::Error> for JustError {
     fn from(value: lettre::error::Error) -> Self {
         JustError::LettreError(value)
     }
 }
 
+#[cfg(feature = "mail")]
 impl From<lettre::address::AddressError> for JustError {
     fn from(value: lettre::address::AddressError) -> Self {
         JustError::LettreAddrError(value)

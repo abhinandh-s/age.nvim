@@ -3,20 +3,29 @@ name = "just_nvim"
 version = "2.0.2"
 edition = "2021"
 
+
+[features]
+default = []
+mail = ["lettre"]
+
 [dependencies]
 nvim-oxi = { version = "0.5.1", features = ["neovim-0-10", "test", "neovim-nightly"] }
+#dirs = "5.0.1"
+# regex = "1.11.0"
 thiserror = "2.0.6"
-dirs = "5.0.1"
-regex = "1.11.0"
-
-serde = { version = "1.0.210", features = ["derive"] }
-serde_json = "1.0.128"
+# serde = { version = "1.0.210", features = ["derive"] }
+# serde_json = "1.0.128"
 age = "0.11.0"
-toml = "0.8.19"
-lettre = "0.11.11"
+#toml = "0.8.19"
+lettre = { version = "0.11.11", optional = true }
 
 [lib]
 name = "just"
 crate-type = ["cdylib"]
 
-
+[profile.release]
+lto = "thin"
+opt-level = "z"  
+codegen-units = 1
+panic = "abort" 
+strip = true 

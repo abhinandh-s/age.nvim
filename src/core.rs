@@ -6,6 +6,7 @@ use nvim_oxi::{print, Dictionary, Result as OxiResult};
 use crate::command::Command;
 use crate::crypt::decrypt_file;
 use crate::error::JustError;
+#[cfg(feature = "mail")]
 use crate::mail::sent_mail;
 use crate::{config::Config, crypt::encrypt_file};
 
@@ -32,6 +33,7 @@ impl App {
         Ok(())
     }
 
+    #[cfg(feature = "mail")]
     pub fn handle_mail(&mut self, _cmd: &Command) -> Result<(), JustError> {
         let creds = &self.config.mail;
 
@@ -45,6 +47,7 @@ impl App {
     /// setting the font or closing the window) is performed.
     pub fn handle_command(&mut self, cmd: Command) -> OxiResult<()> {
         match &cmd {
+            #[cfg(feature = "mail")]
             Command::SentMail => {
                 let re = self.handle_mail(&cmd);
                 if let Err(err) = re {

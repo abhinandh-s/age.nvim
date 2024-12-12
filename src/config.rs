@@ -7,11 +7,13 @@ use nvim_oxi::{conversion::FromObject, Dictionary};
 
 #[derive(Debug, Default)]
 pub struct Config {
+    #[cfg(feature = "mail")]
     pub mail: MailConfigs,
     pub public_key: String,
     pub private_key: String,
 }
 
+#[cfg(feature = "mail")]
 #[derive(Debug, Default)]
 pub struct MailConfigs {
     pub default_to: String,
@@ -34,6 +36,7 @@ impl Config {
                 .and_then(|private_key_obj| String::from_object(private_key_obj.clone()).ok())
                 .unwrap_or_else(|| "".into()),
 
+            #[cfg(feature = "mail")]
             mail: {
                 MailConfigs {
                     default_to: options
