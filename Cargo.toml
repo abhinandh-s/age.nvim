@@ -2,7 +2,13 @@
 name = "just_nvim"
 version = "2.0.2"
 edition = "2021"
-
+license = "GPL-3.0-or-later"
+authors = ["Abhinandh S <abhinandhsuby@proton.me>"]
+description = "Neovim plugin for encrypting and decrypting text files inside neovim using age with ease."
+homepage = "https://github.com/abhi-xyz/just.nvim"
+documentation = "https://github.com/abhi-xyz/just.nvim"
+categories = ["command-line-utilities"]
+keywords = ["tool", "utility"]
 
 [features]
 default = []
@@ -24,8 +30,26 @@ name = "just"
 crate-type = ["cdylib"]
 
 [profile.release]
-lto = "thin"
-opt-level = "z"  
+panic = 'abort'
 codegen-units = 1
-panic = "abort" 
-strip = true 
+opt-level = 'z'
+lto = true
+debug = "none"
+strip = "symbols"
+debug-assertions = false
+overflow-checks = false
+
+[lints.rust]
+unsafe_code = "forbid"
+unused_labels = "allow"
+
+[lints.clippy]
+unwrap_used = "forbid"
+enum_glob_use = "deny"
+type_complexity = "deny"
+redundant_closure = "deny"
+str_to_string = "deny"
+correctness = "deny" # default is deny
+suspicious = "deny"
+complexity = "deny"
+perf = "deny"
