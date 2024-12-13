@@ -1,6 +1,6 @@
 [package]
 name = "just_nvim"
-version = "2.0.2"
+version = "2.0.3"
 edition = "2021"
 license = "GPL-3.0-or-later"
 authors = ["Abhinandh S <abhinandhsuby@proton.me>"]
@@ -12,14 +12,12 @@ keywords = ["tool", "utility"]
 
 [features]
 default = []
-mail = ["lettre"]
 dev = []
 
 [dependencies]
 nvim-oxi = { version = "0.5.1", features = ["neovim-0-10", "test", "neovim-nightly"] }
-thiserror = "2.0.6"
 age = "0.11.0"
-lettre = { version = "0.11.11", optional = true }
+chrono = "0.4.39"
 
 [lib]
 name = "just"

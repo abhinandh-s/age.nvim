@@ -49,11 +49,17 @@ Just provides the `:Just` command with the following syntax:
 - `[action]` can be one of:
   - `encrypt`,
   - `decrypt`,
+  - `genkey`
 
 #### Examples:
 
-- Kills the current buffer and switches to a previous buffer or creates a scratch buffer in case there is no buffer to switch, then encrypts the file with the provided age key.
+- Generates an age key pair into key.txt in current working directory.
 
+```vim
+:Just genkey
+```
+
+- Kills the current buffer and switches to a previous buffer or creates a scratch buffer in case there is no buffer to switch, then encrypts the file with the provided age key.
 
 ```vim
 :Just encrypt

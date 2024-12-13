@@ -1,5 +1,3 @@
-#![allow(dead_code)]
-
 use age::{x25519, Encryptor};
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};

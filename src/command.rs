@@ -4,43 +4,23 @@ use nvim_oxi::Function;
 pub enum Command {
     EncryptFile,
     DecryptFile,
-    #[cfg(feature = "mail")]
-    SentMail,
-    NewFileName(Option<String>),
+    GenKey,
 }
 
 /// Parses a command and its argument from strings.
 ///
 /// This function takes a command string and an optional argument, and returns
-/// a corresponding `Command` variant if the input is valid. The `set_font` command
-/// accepts an optional argument, while other commands may require or ignore arguments.
-///
-/// # Arguments
-///
-/// * `cmd` - A string representing the command.
-/// * `arg` - An optional argument for the command. For example, a font family name for `set_font`.
-///
-/// # Returns
-///
-/// Returns `Some(Command)` if the input matches a known command. Returns `None` if the command is unrecognized.
+/// a corresponding `Command` variant if the input is valid. 
 impl Command {
-    pub fn from_str(cmd: &str, arg: Option<&str>) -> Option<Self> {
+    pub fn from_str(cmd: &str) -> Option<Self> {
         match cmd {
-            "" => {
-                let filename = arg.map(|s| s.to_owned());
-                Some(Command::NewFileName(filename))
-            }
-            #[cfg(feature = "mail")]
-            "sent" => Some(Command::SentMail),
+            "" => None,
             "d" => Some(Command::DecryptFile),
             "e" => Some(Command::EncryptFile),
+            "g" => Some(Command::GenKey),
             "decrypt" => Some(Command::DecryptFile),
             "encrypt" => Some(Command::EncryptFile),
-            #[cfg(feature = "dev")]
-            "new" => {
-                let filename = arg.map(|s| s.to_owned());
-                Some(Command::NewFileName(filename))
-            }
+            "genkey" => Some(Command::GenKey),
             _ => None,
         }
     }
@@ -70,11 +50,9 @@ pub fn completion() -> Function<(String, String, usize), Vec<String>> {
                 vec![]
             } else {
                 let completions = vec![
-                    "new".into(),
                     "decrypt".into(),
                     "encrypt".into(),
-                    #[cfg(feature = "mail")]
-                    "sent".into(),
+                    "genkey".into(),
                 ];
                 completions
                     .into_iter()

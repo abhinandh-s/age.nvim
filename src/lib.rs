@@ -8,11 +8,10 @@ use nvim_oxi::{
 };
 
 use config::Config;
-use error::PluginError;
 
 use self::{
     command::{completion, Command},
-    core::App,
+    core::App, error::JustError,
 };
 
 mod command;
@@ -20,8 +19,6 @@ mod config;
 mod core;
 mod crypt;
 mod error;
-#[cfg(feature = "mail")]
-mod mail;
 
 #[nvim_oxi::plugin]
 fn just() -> OxiResult<Dictionary> {
@@ -40,9 +37,10 @@ fn just() -> OxiResult<Dictionary> {
 
             let mut split_args = binding.split_whitespace();
             let action = split_args.next().unwrap_or("").to_owned();
-            let argument = split_args.next().map(|s| s.to_owned());
+            // let argument = split_args.next().map(|s| s.to_owned());
 
-            let command = Command::from_str(&action, argument.as_deref());
+            let command = Command::from_str(&action);
+            // let command = Command::from_str(&action, argument.as_deref());
 
             match command {
                 Some(command) => {
@@ -73,12 +71,12 @@ fn just() -> OxiResult<Dictionary> {
             Function::from_fn(move |dict: Dictionary| -> OxiResult<()> {
                 match app_setup.lock() {
                     Ok(mut app) => app.setup(dict),
-                    Err(e) => {
+                    Err(err) => {
                         err_writeln(&format!(
                             "Failed to acquire lock on app during setup: {}",
-                            e
+                            err
                         ));
-                        Err(PluginError::Custom("Lock error during setup".into()).into())
+                        Err(JustError::Custom("Lock error during setup".into()).into())
                     }
                 }
             }),

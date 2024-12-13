@@ -1,3 +1,5 @@
+use age::secrecy::ExposeSecret;
+use std::env::current_dir;
 use std::{fs, path};
 
 use nvim_oxi::api::opts::BufDeleteOpts;
@@ -6,8 +8,6 @@ use nvim_oxi::{print, Dictionary, Result as OxiResult};
 use crate::command::Command;
 use crate::crypt::decrypt_file;
 use crate::error::JustError;
-#[cfg(feature = "mail")]
-use crate::mail::sent_mail;
 use crate::{config::Config, crypt::encrypt_file};
 
 #[derive(Debug)]
@@ -33,28 +33,12 @@ impl App {
         Ok(())
     }
 
-    #[cfg(feature = "mail")]
-    pub fn handle_mail(&mut self, _cmd: &Command) -> Result<(), JustError> {
-        let creds = &self.config.mail;
-
-        sent_mail(creds)?;
-        Ok(())
-    }
-
     /// Handles commands issued to the plugin.
     ///
     /// Based on the command and argument passed, the corresponding action (such as
     /// setting the font or closing the window) is performed.
     pub fn handle_command(&mut self, cmd: Command) -> OxiResult<()> {
         match &cmd {
-            #[cfg(feature = "mail")]
-            Command::SentMail => {
-                let re = self.handle_mail(&cmd);
-                if let Err(err) = re {
-                    print!("{}", err);
-                }
-                Ok(())
-            }
             Command::DecryptFile => {
                 let re = self.decrypt_current_file();
                 if let Err(err) = re {
@@ -69,67 +53,29 @@ impl App {
                 }
                 Ok(())
             }
-            Command::NewFileName(Some(arg)) => {
-                let re = self.open_age_file(arg.to_owned());
+            Command::GenKey => {
+                let re = self.gen_new_key();
                 if let Err(err) = re {
                     print!("{}", err);
                 }
                 Ok(())
             }
-            Command::NewFileName(None) => Ok(()), // self.open_age_file(),
         }
     }
 
-    /// Just new (open) filename.some
-    /// opens a new file if it doesnot exist
-    /// else if the file.ends with .age it will decrypt_file and open
-    fn open_age_file(&mut self, arg: String) -> Result<(), JustError> {
-        // got pub Key
-        // got priv Key
-        // got a way to get file path.
-        // quit the buffer and switch to an existing revious one or new Buffer
-        // then encrypt the file
-        let binding = self.config.public_key.to_string();
-        let _public_key = binding.as_str();
-        let prv_binding = self.config.private_key.to_string();
-        let _private_key = prv_binding.as_str();
-        let args = arg.trim();
+    fn gen_new_key(&self) -> Result<(), JustError> {
+        let key = age::x25519::Identity::generate();
+        let time = chrono::Local::now();
+        let formatted_time = time.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
 
-        let binding = nvim_oxi::api::get_current_buf().get_name()?;
-        let cfile = binding.to_string_lossy();
-        print!("{cfile}");
+        let contents = format!(
+            "# created: {}\n# public key: {}\n{}",
+            formatted_time,
+            key.to_public(),
+            key.to_string().expose_secret()
+        );
 
-        if !args.is_empty() {
-            nvim_oxi::api::command(&format!("edit {}", args))?;
-        } else {
-            print!("got empty string");
-        }
-
-        // let input_path = Path::new("new.md");
-        // let encrypted_path = Path::new("new.md.age");
-        // let decrypted_path = Path::new("new_decrypted.md");
-
-        // Encrypt the file
-        // encrypt_file(input_path, encrypted_path, public_key).unwrap();
-
-        // Decrypt the file
-        // decrypt_file(encrypted_path, decrypted_path, private_key).unwrap();
-        // let input_result = api::input("Enter filename: ").unwrap();
-
-        // let input_string = format!("{}", input_result);
-        // print!("{input_string}");
-
-        // match input_result {
-        //     Ok(input) => {
-        //         if input.to_string().is_empty() || input.to_string() == "" {
-        //             print!("No filename provided.");
-        //         } else {
-        //            let name = api::create_namespace(input.to_string().as_str());
-        //            api::command(&format!("edit {}", name)).unwrap();
-        //         }
-        //     },
-        //     Err(err) => { print!("{err}"); },
-        // }
+        std::fs::write(current_dir()?.join("key.txt"), contents)?;
         Ok(())
     }
 
