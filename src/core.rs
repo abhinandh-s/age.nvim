@@ -135,10 +135,8 @@ impl App {
     fn encrypt_current_file(&self) -> Result<(), AgeError> {
         let binding_pub = self.config.public_key.to_string();
         let public_key = binding_pub.as_str();
-        let prv_binding = self.config.private_key.to_string();
-        let _private_key = prv_binding.as_str();
-        let binding_pri = nvim_oxi::api::get_current_buf().get_name()?;
-        let cfile = binding_pri.to_string_lossy();
+        let current_file_path = nvim_oxi::api::get_current_buf().get_name()?;
+        let cfile = current_file_path.to_string_lossy();
         let list_buf = nvim_oxi::api::list_bufs();
         let d = list_buf.len();
         // if len is one will will create a new buf
@@ -166,7 +164,9 @@ impl App {
                 );
                 match result {
                     Ok(_) => {
-                        fs::remove_file(binding_pri)?;
+                        if self.config.encrypt_and_del {
+                            fs::remove_file(current_file_path)?;
+                        }
                     }
                     Err(err) => print!("{}", err),
                 }

@@ -9,6 +9,7 @@ use nvim_oxi::{conversion::FromObject, Dictionary};
 pub struct Config {
     pub public_key: String,
     pub private_key: String,
+    pub encrypt_and_del: bool,
 }
 
 impl Config {
@@ -23,6 +24,11 @@ impl Config {
                 .get("private_key")
                 .and_then(|private_key_obj| String::from_object(private_key_obj.clone()).ok())
                 .unwrap_or_else(|| "".into()),
+
+            encrypt_and_del: options
+                .get("encrypt_and_del")
+                .and_then(|encrypt_and_del| bool::from_object(encrypt_and_del.clone()).ok())
+                .unwrap_or(false),
         }
     }
 }
