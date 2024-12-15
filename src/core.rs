@@ -7,7 +7,7 @@ use nvim_oxi::{print, Dictionary, Result as OxiResult};
 
 use crate::command::Command;
 use crate::crypt::decrypt_file;
-use crate::error::JustError;
+use crate::error::AgeError;
 use crate::{config::Config, crypt::encrypt_file};
 
 #[derive(Debug)]
@@ -63,7 +63,7 @@ impl App {
         }
     }
 
-    fn gen_new_key(&self) -> Result<(), JustError> {
+    fn gen_new_key(&self) -> Result<(), AgeError> {
         let key = age::x25519::Identity::generate();
         let time = chrono::Local::now();
         let formatted_time = time.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
@@ -79,7 +79,7 @@ impl App {
         Ok(())
     }
 
-    fn decrypt_current_file(&self) -> Result<(), JustError> {
+    fn decrypt_current_file(&self) -> Result<(), AgeError> {
         let binding = self.config.private_key.to_string();
         let private_key = binding.as_str();
         let current_file_bufnr = nvim_oxi::api::get_current_buf();
@@ -132,7 +132,7 @@ impl App {
         Ok(())
     }
 
-    fn encrypt_current_file(&self) -> Result<(), JustError> {
+    fn encrypt_current_file(&self) -> Result<(), AgeError> {
         let binding_pub = self.config.public_key.to_string();
         let public_key = binding_pub.as_str();
         let prv_binding = self.config.private_key.to_string();

@@ -1,4 +1,4 @@
-//! This module defines the configuration structure and logic for the Just plugin.
+//! This module defines the configuration structure and logic for the Age plugin.
 //!
 //! # Configuration Fields
 

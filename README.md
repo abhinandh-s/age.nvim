@@ -1,6 +1,6 @@
 <div align="center">
 
-# just.nvim
+# age.nvim
 
 </div>
 
@@ -18,18 +18,18 @@
 
 ## Installation
 
-Install Just using your favorite plugin manager. For example, with [lazy.nvim](https://github.com/folke/lazy.nvim):
+Install Age using your favorite plugin manager. For example, with [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
--- ~/.config/nvim/lua/plugins/just.lua
+-- ~/.config/nvim/lua/plugins/age.lua
 
 {
-    'abhi-xyz/just.nvim',
-    cmd = { "Just", "J" },
+    'abhi-xyz/age.nvim',
+    cmd = { "Age" },
     config = function()
       local key = require('key')
 
-      require('just').setup({
+      require('age').setup({
         public_key = "ageXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
         private_key = key.private_key, -- defined in another lua file which is not included in git for safety
       })
@@ -46,10 +46,10 @@ return {
 
 ## Usage
 
-Just provides the `:Just` command with the following syntax:
+Age provides the `:Age` command with the following syntax:
 
 ```vim
-:Just [action]
+:Age [action]
 ```
 
 - `[action]` can be one of:
@@ -62,18 +62,18 @@ Just provides the `:Just` command with the following syntax:
 - Generates an age key pair into key.txt in current working directory.
 
 ```vim
-:Just genkey
+:Age genkey
 ```
 
 - Kills the current buffer and switches to a previous buffer or creates a scratch buffer in case there is no buffer to switch, then encrypts the file with the provided age key.
 
 ```vim
-:Just encrypt
+:Age encrypt
 ```
 
 - Decrypts the currently opened encrypted file, and switches to the decrypted file. 
 ```vim
-:Just decrypt
+:Age decrypt
 ```
 ## What is age?
 

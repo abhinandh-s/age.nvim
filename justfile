@@ -1,5 +1,5 @@
 install:
-  echo "Building just.nvim from source..."
+  echo "Building age.nvim from source..."
   cargo build --release --target-dir ./target
   mkdir -p lua
-  mv target/release/libjust.so lua/just.so
+  mv target/release/libage.so lua/age.so

@@ -1,12 +1,12 @@
 [package]
-name = "just_nvim"
+name = "age_nvim"
 version = "2.0.3"
 edition = "2021"
 license = "GPL-3.0-or-later"
 authors = ["Abhinandh S <abhinandhsuby@proton.me>"]
 description = "Neovim plugin for encrypting and decrypting text files inside neovim using age with ease."
-homepage = "https://github.com/abhi-xyz/just.nvim"
-documentation = "https://github.com/abhi-xyz/just.nvim"
+homepage = "https://github.com/abhi-xyz/age.nvim"
+documentation = "https://github.com/abhi-xyz/age.nvim"
 categories = ["command-line-utilities"]
 keywords = ["tool", "utility"]
 
@@ -20,7 +20,7 @@ age = "0.11.0"
 chrono = "0.4.39"
 
 [lib]
-name = "just"
+name = "age"
 crate-type = ["cdylib"]
 
 [profile.release]

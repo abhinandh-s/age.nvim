@@ -11,7 +11,7 @@ use config::Config;
 
 use self::{
     command::{completion, Command},
-    core::App, error::JustError,
+    core::App, error::AgeError,
 };
 
 mod command;
@@ -21,12 +21,12 @@ mod crypt;
 mod error;
 
 #[nvim_oxi::plugin]
-fn just() -> OxiResult<Dictionary> {
+fn age() -> OxiResult<Dictionary> {
     let config = Config::default();
 
     let app = Arc::new(Mutex::new(App::new(config)));
 
-    let just_cmd = {
+    let age_cmd = {
         let app_handle_cmd = Arc::clone(&app);
 
         move |args: CommandArgs| -> OxiResult<()> {
@@ -57,12 +57,12 @@ fn just() -> OxiResult<Dictionary> {
     };
 
     let opts = CreateCommandOpts::builder()
-        .desc("Just command")
+        .desc("Age command")
         .complete(CommandComplete::CustomList(completion()))
         .nargs(CommandNArgs::Any)
         .build();
 
-    create_user_command("Just", just_cmd, &opts)?;
+    create_user_command("Age", age_cmd, &opts)?;
 
     let app_setup = Arc::clone(&app);
     let exports: Dictionary =
@@ -76,7 +76,7 @@ fn just() -> OxiResult<Dictionary> {
                             "Failed to acquire lock on app during setup: {}",
                             err
                         ));
-                        Err(JustError::Custom("Lock error during setup".into()).into())
+                        Err(AgeError::Custom("Lock error during setup".into()).into())
                     }
                 }
             }),
