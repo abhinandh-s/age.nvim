@@ -1,3 +1,8 @@
 [toolchain]
 channel = "stable"
-# channel = "nightly"
+components = [ "rustfmt", "rust-analyzer", "clippy" ]
+# The default profile includes all of components in the minimal profile,
+# and adds rust-docs, rustfmt, and clippy.
+# This profile will be used by rustup by default, and
+# it’s the one recommended for general use.
+profile = "default"

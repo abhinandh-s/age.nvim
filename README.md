@@ -10,6 +10,10 @@
 
 </div>
 
+<div>
+![GitHub License](https://img.shields.io/github/license/abhi-xyz/age.nvim)
+</div>
+
 ## Table of Contents  
 
 - [Installation](#installation)  
