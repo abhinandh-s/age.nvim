@@ -15,7 +15,7 @@ default = []
 dev = []
 
 [dependencies]
-nvim-oxi = { version = "0.5.1", features = ["neovim-0-10", "test", "neovim-nightly"] }
+nvim-oxi = { version = "0.6.0", features = ["neovim-0-10", "test", "neovim-nightly"] }
 age = "0.11.1"
 chrono = "0.4.41"
 
