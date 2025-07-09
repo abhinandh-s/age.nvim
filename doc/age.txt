@@ -1,5 +1,5 @@
-*age.txt*         For NVIM v0.10.0         Created: 2024 December 10
+*age.txt*         For NVIM v0.11.0         Created: 2024 December 10
 
 ==============================================================================
 
-
+Neovim plugin for encrypting and decrypting text files inside neovim using [age](https://github.com/FiloSottile/age) with ease.
