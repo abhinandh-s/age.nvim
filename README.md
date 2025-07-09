@@ -23,6 +23,32 @@
 
 Install Age using your favorite plugin manager. For example, with [lazy.nvim](https://github.com/folke/lazy.nvim):
 
+### config via env variable
+
+```lua
+-- ~/.config/nvim/lua/plugins/age.lua
+
+{
+    'abhi-xyz/age.nvim',
+    cmd = { "Age" },
+    config = function()
+    local public_key = os.getenv("AGE_PUBLIC_KEY")
+    local private_key = os.getenv("AGE_PRIVATE_KEY")
+
+      require('age').setup({
+        encrypt_and_del = true, -- will remove the original file after encrypting.
+        public_key = public_key,
+        private_key = private_key,
+      })
+    end
+}
+```
+
+> [!TIP]
+> check examples dir for non panic version
+
+### config via lua file 
+
 ```lua
 -- ~/.config/nvim/lua/plugins/age.lua
 
