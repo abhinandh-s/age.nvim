@@ -12,11 +12,11 @@ pub enum AgeError {
 impl std::fmt::Display for AgeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AgeError::NvimError(err) => write!(f, "Neovim Error: {}", err),
-            AgeError::ApiError(err) => write!(f, "API Error: {}", err),
-            AgeError::IoError(err) => write!(f, "IO Error: {}", err),
-            AgeError::Other(msg) => write!(f, "Error: {}", msg),
-            AgeError::Custom(msg) => write!(f, "Error: {}", msg),
+            AgeError::NvimError(err) => write!(f, "Neovim Error: {err}"),
+            AgeError::ApiError(err) => write!(f, "API Error: {err}"),
+            AgeError::IoError(err) => write!(f, "IO Error: {err}"),
+            AgeError::Other(err) => write!(f, "Error: {err}"),
+            AgeError::Custom(err) => write!(f, "Error: {err}"),
         }
     }
 }
@@ -40,7 +40,7 @@ impl std::fmt::Display for AgeError {
     /// }
     /// ```
     fn from(err: AgeError) -> Self {
-        OxiError::Api(OxiApiError::Other(format!("{}", err)))
+        OxiError::Api(OxiApiError::Other(format!("{err}")))
     }
 }
 

@@ -50,7 +50,7 @@ fn age() -> OxiResult<Dictionary> {
                         err_writeln("Failed to acquire lock on app");
                     }
                 }
-                None => err_writeln(&format!("Unknown command: {}", action)),
+                None => err_writeln(&format!("Unknown command: {action}")),
             };
             Ok(())
         }
@@ -73,8 +73,7 @@ fn age() -> OxiResult<Dictionary> {
                     Ok(mut app) => app.setup(dict),
                     Err(err) => {
                         err_writeln(&format!(
-                            "Failed to acquire lock on app during setup: {}",
-                            err
+                            "Failed to acquire lock on app during setup: {err}"
                         ));
                         Err(AgeError::Custom("Lock error during setup".into()).into())
                     }

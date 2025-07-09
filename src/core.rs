@@ -114,7 +114,7 @@ impl App {
                         );
                         match result {
                             Ok(_) => {
-                                let command = format!("edit {}", new_filename);
+                                let command = format!("edit {new_filename}");
                                 nvim_oxi::api::command(&command)?;
                             }
                             Err(err) => print!("{}", err),
