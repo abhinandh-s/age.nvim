@@ -7,7 +7,7 @@ use nvim_oxi::{print, Dictionary, Result as OxiResult};
 
 use crate::command::Command;
 use crate::crypt::decrypt_file;
-use crate::error::AgeError;
+use crate::error::Error;
 use crate::{config::Config, crypt::encrypt_file};
 
 #[derive(Debug)]
@@ -63,7 +63,7 @@ impl App {
         }
     }
 
-    fn gen_new_key(&self) -> Result<(), AgeError> {
+    fn gen_new_key(&self) -> Result<(), Error> {
         let key = age::x25519::Identity::generate();
         let time = chrono::Local::now();
         let formatted_time = time.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
@@ -79,7 +79,7 @@ impl App {
         Ok(())
     }
 
-    fn decrypt_current_file(&self) -> Result<(), AgeError> {
+    fn decrypt_current_file(&self) -> Result<(), Error> {
         let binding = self.config.private_key.to_string();
         let private_key = binding.as_str();
         let current_file_bufnr = nvim_oxi::api::get_current_buf();
@@ -91,48 +91,35 @@ impl App {
         match extension {
             Some(ext) if ext == "age" => {
                 let name = current_file.rsplit_once(".");
-                if let Some((f, e)) = name {
-                    let new_filename = f;
-                    let age_extension = e;
-                    if age_extension != "age" {
-                        print!("returned early Ok");
-                        return Ok(());
-                    } else {
-                        if path::Path::new(new_filename).exists() {
-                            fs::remove_file(new_filename)?;
-                        }
-                        let new_scratch_buf = nvim_oxi::api::create_buf(false, true)?;
-                        nvim_oxi::api::set_current_buf(&new_scratch_buf)?;
-                        let opts = BufDeleteOpts::builder()
-                            .force(true) // Force deletion, ignoring unsaved changes
-                            .build();
-                        nvim_oxi::api::Buffer::delete(current_file_bufnr, &opts)?;
-                        let result = decrypt_file(
-                            &current_file_path,
-                            path::Path::new(new_filename),
-                            private_key,
-                        );
-                        match result {
-                            Ok(_) => {
-                                let command = format!("edit {new_filename}");
-                                nvim_oxi::api::command(&command)?;
-                            }
-                            Err(err) => print!("{}", err),
-                        }
+                if let Some((stem_name, _)) = name {
+                    if path::Path::new(stem_name).exists() {
+                        fs::remove_file(stem_name)?;
                     }
+                    let new_scratch_buf = nvim_oxi::api::create_buf(false, true)?;
+                    nvim_oxi::api::set_current_buf(&new_scratch_buf)?;
+                    let opts = BufDeleteOpts::builder()
+                        .force(true) // Force deletion, ignoring unsaved changes
+                        .build();
+                    nvim_oxi::api::Buffer::delete(current_file_bufnr, &opts)?;
+                    decrypt_file(&current_file_path, path::Path::new(stem_name), private_key)
+                        .and_then(|_| {
+                            let command = format!("edit {stem_name}");
+                            nvim_oxi::api::command(&command)?;
+                            Ok(())
+                        })?;
                 }
             }
             Some(_) => {
-                print!("was it encrypted?");
+                print!("Not an age file. Aborting decryption..");
             }
             None => {
-                print!("seriously? This file have no extension.");
+                print!("This file have no extension. `.age` extension is needed for decryption");
             }
         }
         Ok(())
     }
 
-    fn encrypt_current_file(&self) -> Result<(), AgeError> {
+    fn encrypt_current_file(&self) -> Result<(), Error> {
         let binding_pub = self.config.public_key.to_string();
         let public_key = binding_pub.as_str();
         let current_file_path = nvim_oxi::api::get_current_buf().get_name()?;
@@ -157,19 +144,17 @@ impl App {
         match extension_result {
             Some(ext) => {
                 let new_extension = ext.to_string_lossy().to_string() + ".age";
-                let result = encrypt_file(
+                encrypt_file(
                     path::Path::new(&cfile.to_string()),
                     &path::Path::new(&cfile.to_string()).with_extension(new_extension),
                     public_key,
-                );
-                match result {
-                    Ok(_) => {
-                        if self.config.encrypt_and_del {
-                            fs::remove_file(current_file_path)?;
-                        }
+                )
+                .and_then(|_| {
+                    if self.config.encrypt_and_del {
+                        fs::remove_file(current_file_path)?;
                     }
-                    Err(err) => print!("{}", err),
-                }
+                    Ok(())
+                })?;
             }
             None => {
                 encrypt_file(

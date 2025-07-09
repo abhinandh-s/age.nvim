@@ -4,14 +4,14 @@ use std::sync::{Arc, Mutex};
 
 use nvim_oxi::{
     api::{create_user_command, err_writeln, opts::CreateCommandOpts, types::*},
-    Dictionary, Error as OxiError, Function, Result as OxiResult,
+    Dictionary, Function,
 };
 
 use config::Config;
 
 use self::{
     command::{completion, Command},
-    core::App, error::AgeError,
+    core::App, error::Error,
 };
 
 mod command;
@@ -21,7 +21,7 @@ mod crypt;
 mod error;
 
 #[nvim_oxi::plugin]
-fn age() -> OxiResult<Dictionary> {
+fn age() -> Result<Dictionary, nvim_oxi::Error> {
     let config = Config::default();
 
     let app = Arc::new(Mutex::new(App::new(config)));
@@ -29,7 +29,7 @@ fn age() -> OxiResult<Dictionary> {
     let age_cmd = {
         let app_handle_cmd = Arc::clone(&app);
 
-        move |args: CommandArgs| -> OxiResult<()> {
+        move |args: CommandArgs| -> Result<(), nvim_oxi::Error> {
             let binding = match args.args {
                 Some(a) => a,
                 None => "".to_owned(),
@@ -66,16 +66,16 @@ fn age() -> OxiResult<Dictionary> {
 
     let app_setup = Arc::clone(&app);
     let exports: Dictionary =
-        Dictionary::from_iter::<[(&str, Function<Dictionary, Result<(), OxiError>>); 1]>([(
+        Dictionary::from_iter::<[(&str, Function<Dictionary, Result<(), nvim_oxi::Error>>); 1]>([(
             "setup",
-            Function::from_fn(move |dict: Dictionary| -> OxiResult<()> {
+            Function::from_fn(move |dict: Dictionary| -> Result<(), nvim_oxi::Error> {
                 match app_setup.lock() {
                     Ok(mut app) => app.setup(dict),
                     Err(err) => {
                         err_writeln(&format!(
                             "Failed to acquire lock on app during setup: {err}"
                         ));
-                        Err(AgeError::Custom("Lock error during setup".into()).into())
+                        Err(Error::Custom("Lock error during setup".into()).into())
                     }
                 }
             }),

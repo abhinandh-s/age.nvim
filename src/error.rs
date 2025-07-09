@@ -1,28 +1,28 @@
 use nvim_oxi::{api::Error as OxiApiError, Error as OxiError};
 
 #[derive(Debug)]
-pub enum AgeError {
-    NvimError(nvim_oxi::Error),
-    ApiError(nvim_oxi::api::Error),
-    IoError(std::io::Error),
+pub enum Error {
+    Nvim(nvim_oxi::Error),
+    Api(nvim_oxi::api::Error),
+    Io(std::io::Error),
     Other(String),
     Custom(String),
 }
 
-impl std::fmt::Display for AgeError {
+impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AgeError::NvimError(err) => write!(f, "Neovim Error: {err}"),
-            AgeError::ApiError(err) => write!(f, "API Error: {err}"),
-            AgeError::IoError(err) => write!(f, "IO Error: {err}"),
-            AgeError::Other(err) => write!(f, "Error: {err}"),
-            AgeError::Custom(err) => write!(f, "Error: {err}"),
+            Error::Nvim(err) => write!(f, "Neovim Error: {err}"),
+            Error::Api(err) => write!(f, "API Error: {err}"),
+            Error::Io(err) => write!(f, "IO Error: {err}"),
+            Error::Other(err) => write!(f, "Error: {err}"),
+            Error::Custom(err) => write!(f, "Error: {err}"),
         }
     }
 }
 
 // Implement `From<AgeError>` for `nvim_oxi::Error`.
- impl From<AgeError> for OxiError {
+ impl From<Error> for OxiError {
     /// Converts a `AgeError` into a `nvim_oxi::Error`.
     ///
     /// This allows the `AgeError` to be returned where an `OxiError` is expected, ensuring compatibility
@@ -39,40 +39,40 @@ impl std::fmt::Display for AgeError {
     ///     Err(OxiError::from(error))
     /// }
     /// ```
-    fn from(err: AgeError) -> Self {
+    fn from(err: Error) -> Self {
         OxiError::Api(OxiApiError::Other(format!("{err}")))
     }
 }
 
-impl std::error::Error for AgeError {}
+impl std::error::Error for Error {}
 
-impl From<nvim_oxi::Error> for AgeError {
+impl From<nvim_oxi::Error> for Error {
     fn from(err: nvim_oxi::Error) -> Self {
-        AgeError::NvimError(err)
+        Error::Nvim(err)
     }
 }
 
-impl From<nvim_oxi::api::Error> for AgeError {
+impl From<nvim_oxi::api::Error> for Error {
     fn from(err: nvim_oxi::api::Error) -> Self {
-        AgeError::ApiError(err)
+        Error::Api(err)
     }
 }
 
-impl From<std::io::Error> for AgeError {
+impl From<std::io::Error> for Error {
     fn from(err: std::io::Error) -> Self {
-        AgeError::IoError(err)
+        Error::Io(err)
     }
 }
 
-impl From<&str> for AgeError {
+impl From<&str> for Error {
     fn from(msg: &str) -> Self {
-        AgeError::Other(msg.to_owned())
+        Error::Other(msg.to_owned())
     }
 }
 
-impl From<Box<dyn std::error::Error>> for AgeError {
+impl From<Box<dyn std::error::Error>> for Error {
     fn from(err: Box<dyn std::error::Error>) -> Self {
         // Here, we convert the boxed error into a string and wrap it in AgeError::Other
-        AgeError::Other(err.to_string())
+        Error::Other(err.to_string())
     }
 }
