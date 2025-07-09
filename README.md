@@ -18,6 +18,9 @@
 
 ## Installation
 
+> [!WARNING]
+> Supports Neovim version >= 0.11
+
 Install Age using your favorite plugin manager. For example, with [lazy.nvim](https://github.com/folke/lazy.nvim):
 
 ```lua
