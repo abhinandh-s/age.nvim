@@ -120,7 +120,7 @@ It features small explicit keys, no config options, and UNIX-style composability
 5. **Focused Use Case**: Age is purpose-built for encrypting files securely and efficiently, without the additional complexity of key management and email encryption that GPG supports.
 
 
-### License
+## License
 
 Licensed under <a href="LICENSE">MIT license</a>.
 
