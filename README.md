@@ -19,13 +19,14 @@
 ## Installation
 
 > [!WARNING]
-> Supports Neovim version >= 0.11
-> for version 10 use branch
-> ```
-    'abhinandh-s/age.nvim',
-    branch = "nvim-v10",
-> 
-> ```
+> Master branch supports Neovim version >= 0.11
+
+```lua
+  ...  
+  'abhinandh-s/age.nvim',
+  branch = "nvim-v10", -- pin branch for Neovim version 0.10
+  ...
+```
 
 Install Age using your favorite plugin manager. For example, with [lazy.nvim](https://github.com/folke/lazy.nvim):
 
