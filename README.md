@@ -30,6 +30,7 @@ Install Age using your favorite plugin manager. For example, with [lazy.nvim](ht
 
 {
     'abhi-xyz/age.nvim',
+    branch = "nvim-v10",
     cmd = { "Age" },
     config = function()
     local public_key = os.getenv("AGE_PUBLIC_KEY")
@@ -54,6 +55,7 @@ Install Age using your favorite plugin manager. For example, with [lazy.nvim](ht
 
 {
     'abhi-xyz/age.nvim',
+    branch = "nvim-v10",
     cmd = { "Age" },
     config = function()
       local key = require('key')
