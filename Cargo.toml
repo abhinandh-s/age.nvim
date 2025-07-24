@@ -5,8 +5,8 @@ edition = "2021"
 license = "GPL-3.0-or-later"
 authors = ["Abhinandh S <abhinandhsuby@proton.me>"]
 description = "Neovim plugin for encrypting and decrypting text files inside neovim using age with ease."
-homepage = "https://github.com/abhi-xyz/age.nvim"
-documentation = "https://github.com/abhi-xyz/age.nvim"
+homepage = "https://github.com/abhinandh-s/age.nvim"
+documentation = "https://github.com/abhinandh-s/age.nvim"
 categories = ["command-line-utilities"]
 keywords = ["tool", "utility"]
 
@@ -15,7 +15,7 @@ default = []
 dev = []
 
 [dependencies]
-nvim-oxi = { version = "0.6.0", features = ["neovim-nightly"] } # neovim 11 or nightly
+nvim-oxi = { version = "0.6.0", features = ["neovim-0-10"] }
 age = "0.11.1"
 chrono = "0.4.41"
 
