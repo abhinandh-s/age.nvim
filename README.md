@@ -29,7 +29,7 @@ Install Age using your favorite plugin manager. For example, with [lazy.nvim](ht
 -- ~/.config/nvim/lua/plugins/age.lua
 
 {
-    'abhi-xyz/age.nvim',
+    'abhinandh-s/age.nvim',
     branch = "nvim-v10",
     cmd = { "Age" },
     config = function()
@@ -54,7 +54,7 @@ Install Age using your favorite plugin manager. For example, with [lazy.nvim](ht
 -- ~/.config/nvim/lua/plugins/age.lua
 
 {
-    'abhi-xyz/age.nvim',
+    'abhinandh-s/age.nvim',
     branch = "nvim-v10",
     cmd = { "Age" },
     config = function()
