@@ -19,7 +19,7 @@
 ## Installation
 
 > [!WARNING]
-> Supports Neovim version >= 0.11
+> Supports Neovim version = 0.10 only
 
 Install Age using your favorite plugin manager. For example, with [lazy.nvim](https://github.com/folke/lazy.nvim):
 
