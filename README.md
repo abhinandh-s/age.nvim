@@ -20,6 +20,12 @@
 
 > [!WARNING]
 > Supports Neovim version >= 0.11
+> for version 10 use branch
+> ```
+    'abhinandh-s/age.nvim',
+    branch = "nvim-v10",
+> 
+> ```
 
 Install Age using your favorite plugin manager. For example, with [lazy.nvim](https://github.com/folke/lazy.nvim):
 
@@ -29,7 +35,7 @@ Install Age using your favorite plugin manager. For example, with [lazy.nvim](ht
 -- ~/.config/nvim/lua/plugins/age.lua
 
 {
-    'abhi-xyz/age.nvim',
+    'abhinandh-s/age.nvim',
     cmd = { "Age" },
     config = function()
     local public_key = os.getenv("AGE_PUBLIC_KEY")
@@ -53,7 +59,7 @@ Install Age using your favorite plugin manager. For example, with [lazy.nvim](ht
 -- ~/.config/nvim/lua/plugins/age.lua
 
 {
-    'abhi-xyz/age.nvim',
+    'abhinandh-s/age.nvim',
     cmd = { "Age" },
     config = function()
       local key = require('key')
