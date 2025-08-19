@@ -32,7 +32,7 @@ Install Age using your favorite plugin manager. For example, with [lazy.nvim](ht
 
 ### Dependencies
 
-*None*. `age.nvim` does not require the `age` CLI to be installed separately.
+**None**. `age.nvim` does not require the `age` CLI to be installed separately.
 Everything needed for encryption and decryption is handled within the plugin itself.
 
 
