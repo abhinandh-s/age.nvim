@@ -30,6 +30,12 @@
 
 Install Age using your favorite plugin manager. For example, with [lazy.nvim](https://github.com/folke/lazy.nvim):
 
+### Dependencies
+
+*None*. `age.nvim` does not require the `age` CLI to be installed separately.
+Everything needed for encryption and decryption is handled within the plugin itself.
+
+
 ### config via env variable
 
 ```lua
