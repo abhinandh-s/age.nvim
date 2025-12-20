@@ -1,6 +1,4 @@
-#![allow(clippy::arc_with_non_send_sync)]
-
-use std::sync::{Arc, Mutex};
+use std::{cell::RefCell, rc::Rc};
 
 use nvim_oxi::{
     api::{create_user_command, err_writeln, opts::CreateCommandOpts, types::*},
@@ -11,7 +9,7 @@ use config::Config;
 
 use self::{
     command::{completion, Command},
-    core::App, error::Error,
+    core::App,
 };
 
 mod command;
@@ -24,10 +22,10 @@ mod error;
 fn age() -> Result<Dictionary, nvim_oxi::Error> {
     let config = Config::default();
 
-    let app = Arc::new(Mutex::new(App::new(config)));
+    let app = Rc::new(RefCell::new(App::new(config)));
 
     let age_cmd = {
-        let app_handle_cmd = Arc::clone(&app);
+        let app_handle_cmd = Rc::clone(&app);
 
         move |args: CommandArgs| -> Result<(), nvim_oxi::Error> {
             let binding = match args.args {
@@ -37,18 +35,12 @@ fn age() -> Result<Dictionary, nvim_oxi::Error> {
 
             let mut split_args = binding.split_whitespace();
             let action = split_args.next().unwrap_or("").to_owned();
-            // let argument = split_args.next().map(|s| s.to_owned());
 
             let command = Command::from_str(&action);
-            // let command = Command::from_str(&action, argument.as_deref());
 
             match command {
                 Some(command) => {
-                    if let Ok(mut app_lock) = app_handle_cmd.lock() {
-                        app_lock.handle_command(command)?;
-                    } else {
-                        err_writeln("Failed to acquire lock on app");
-                    }
+                    app_handle_cmd.borrow_mut().handle_command(command)?;
                 }
                 None => err_writeln(&format!("Unknown command: {action}")),
             };
@@ -64,22 +56,15 @@ fn age() -> Result<Dictionary, nvim_oxi::Error> {
 
     create_user_command("Age", age_cmd, &opts)?;
 
-    let app_setup = Arc::clone(&app);
-    let exports: Dictionary =
-        Dictionary::from_iter::<[(&str, Function<Dictionary, Result<(), nvim_oxi::Error>>); 1]>([(
-            "setup",
-            Function::from_fn(move |dict: Dictionary| -> Result<(), nvim_oxi::Error> {
-                match app_setup.lock() {
-                    Ok(mut app) => app.setup(dict),
-                    Err(err) => {
-                        err_writeln(&format!(
-                            "Failed to acquire lock on app during setup: {err}"
-                        ));
-                        Err(Error::Custom("Lock error during setup".into()).into())
-                    }
-                }
-            }),
-        )]);
+    let app_setup = Rc::clone(&app);
+    let exports: Dictionary = Dictionary::from_iter::<
+        [(&str, Function<Dictionary, Result<(), nvim_oxi::Error>>); 1],
+    >([(
+        "setup",
+        Function::from_fn(move |dict: Dictionary| -> Result<(), nvim_oxi::Error> {
+            app_setup.borrow_mut().setup(dict)
+        }),
+    )]);
 
     Ok(exports)
 }
