@@ -1,7 +1,7 @@
 -- ~/.config/nvim/lua/plugins/age.lua
 
 return {
-    'abhi-xyz/age.nvim',
+    'abhinandh-s/age.nvim',
     cmd = { "Age" },
     config = function()
       local key = require('key')
