@@ -120,6 +120,10 @@ Age provides the `:Age` command with the following syntax:
 ```vim
 :Age decrypt
 ```
+
+> [!NOTE]
+> If you have any suggestions, please let me know.
+
 ## What is age?
 
 [age](https://age-encryption.org/) is a simple, modern and secure file encryption tool.
