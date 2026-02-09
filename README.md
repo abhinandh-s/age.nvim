@@ -118,9 +118,9 @@ The `:Age` command with the following syntax:
 - Kills the current buffer and switches to a previous buffer or creates a scratch buffer in case there is no buffer to switch, then encrypts the file with the provided age key.
 
 ```vim
-:Age encrypt -- uses public key from config
-:Age encrypt age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p -- public keys
-:Age encrypt /path/to/recipents.txt -- list for public keys
+:Age encrypt " uses public key from config
+:Age encrypt age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p " public keys
+:Age encrypt /path/to/recipents.txt " list for public keys
 ```
 
 - Decrypts the currently opened encrypted file, and switches to the decrypted file. 
