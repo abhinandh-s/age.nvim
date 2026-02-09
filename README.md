@@ -91,9 +91,10 @@ return {
 
 ## Usage
 
-Age provides: 
-    - command - `:Age` 
-    - apis - `decrypt_to_string` and `decrypt_to_string_with_identities`
+Age provides:
+
+- command - `:Age` 
+- apis - `decrypt_to_string` and `decrypt_to_string_with_identities`
 
 The `:Age` command with the following syntax:
 
@@ -106,7 +107,7 @@ The `:Age` command with the following syntax:
   - `decrypt`,
   - `genkey`
 
-#### Examples:
+#### Example usage of command:
 
 - Generates an age key pair into key.txt in current working directory.
 
@@ -124,6 +125,8 @@ The `:Age` command with the following syntax:
 ```vim
 :Age decrypt
 ```
+
+#### Example usage of api:
 
 You can use age api in nvim configs as:
 
