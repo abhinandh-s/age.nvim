@@ -22,7 +22,7 @@ impl std::fmt::Display for Error {
 }
 
 // Implement `From<AgeError>` for `nvim_oxi::Error`.
- impl From<Error> for OxiError {
+impl From<Error> for OxiError {
     /// Converts a `AgeError` into a `nvim_oxi::Error`.
     ///
     /// This allows the `AgeError` to be returned where an `OxiError` is expected, ensuring compatibility

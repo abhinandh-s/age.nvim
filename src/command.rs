@@ -10,7 +10,7 @@ pub enum Command {
 /// Parses a command and its argument from strings.
 ///
 /// This function takes a command string and an optional argument, and returns
-/// a corresponding `Command` variant if the input is valid. 
+/// a corresponding `Command` variant if the input is valid.
 impl Command {
     pub fn from_str(cmd: &str) -> Option<Self> {
         match cmd {
@@ -49,11 +49,7 @@ pub fn completion() -> Function<(String, String, usize), Vec<String>> {
             if current_arg_index > 0 {
                 vec![]
             } else {
-                let completions = vec![
-                    "decrypt".into(),
-                    "encrypt".into(),
-                    "genkey".into(),
-                ];
+                let completions = vec!["decrypt".into(), "encrypt".into(), "genkey".into()];
                 completions
                     .into_iter()
                     .filter(|c: &String| c.starts_with(&arg_lead))

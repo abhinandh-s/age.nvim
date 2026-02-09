@@ -27,13 +27,18 @@ fn age() -> Result<Dictionary, nvim_oxi::Error> {
         let app_handle_cmd = Rc::clone(&app);
 
         move |args: CommandArgs| -> Result<(), nvim_oxi::Error> {
-            let binding = args.args.unwrap_or_else(|| "".to_owned());
-            let action = binding.split_whitespace().next().unwrap_or_default();
+            let binding = args.args.unwrap_or_default();
+            let mut parts = binding.split_whitespace();
+
+            let action = parts.next().unwrap_or_default();
             let command = Command::from_str(action);
+            let raw_args = parts.map(|s| s.to_owned()).collect::<Vec<String>>();
 
             match command {
                 Some(command) => {
-                    app_handle_cmd.borrow_mut().handle_command(command)?;
+                    app_handle_cmd
+                        .borrow_mut()
+                        .handle_command(command, raw_args)?;
                 }
                 None => err_writeln(&format!("Unknown command: {action}")),
             };
@@ -61,7 +66,7 @@ fn age() -> Result<Dictionary, nvim_oxi::Error> {
     )]);
 
     // -- lib
-    
+
     // -- some_file.lua
     //
     // local age = require("age")
