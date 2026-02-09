@@ -122,6 +122,7 @@ impl App {
     fn encrypt_current_file(&self) -> Result<(), Error> {
         let binding_pub = self.config.public_key.to_string();
         let public_key = binding_pub.as_str();
+        validate_public_key(public_key)?;
         let current_file_path = nvim_oxi::api::get_current_buf().get_name()?;
         let cfile = current_file_path.to_string_lossy();
         let list_buf = nvim_oxi::api::list_bufs();
@@ -166,4 +167,77 @@ impl App {
         }
         Ok(())
     }
+
+    pub fn decrypt_to_string(&self, file_path: String) -> Result<String, Error> {
+        let private_key = self.config.private_key.to_string();
+        validate_private_key(private_key.as_ref())?;
+
+        let path = path::Path::new(&file_path);
+        validate_path(path)?;
+
+        Ok(crate::crypt::decrypt_to_string(path, private_key.as_str())?)
+    }
+
+    pub fn decrypt_with_identities(
+        &self,
+        file_path: String,
+        identity_paths: Vec<String>,
+    ) -> Result<String, Error> {
+        let path = path::Path::new(&file_path);
+        validate_path(path)?;
+
+        let mut identities = Vec::new();
+
+        for id_path in identity_paths {
+            let p = path::Path::new(&id_path);
+            if !p.exists() {
+                return Err(Error::Custom(format!("Identity file not found: {id_path}")));
+            }
+
+            // Use age::IdentityFile to parse the file (supports age & SSH formats)
+            let identity_file =
+                age::IdentityFile::from_file(p.to_string_lossy().to_string())?.into_identities()?;
+
+            // IdentityFile implements into_identities()
+            identities.extend(identity_file);
+        }
+
+        if identities.is_empty() {
+            return Err(Error::Custom("No valid identities provided".to_owned()));
+        }
+
+        Ok(crate::crypt::decrypt_with_identities(path, identities)?)
+    }
+}
+
+fn validate_private_key(key: &str) -> Result<(), nvim_oxi::Error> {
+    if key.is_empty() {
+        return Err(Error::Custom("Private key not configured".to_owned()).into());
+    }
+
+    if !key.starts_with("AGE-SECRET-KEY-") {
+        return Err(Error::Custom("provided key is not a vaild Private key".to_owned()).into());
+    }
+
+    Ok(())
+}
+
+fn validate_public_key(key: &str) -> Result<(), nvim_oxi::Error> {
+    if key.is_empty() {
+        return Err(Error::Custom("Private key not configured".to_owned()).into());
+    }
+
+    if !key.starts_with("age") {
+        return Err(Error::Custom("provided key is not a vaild Private key".to_owned()).into());
+    }
+
+    Ok(())
+}
+
+fn validate_path(path: &path::Path) -> Result<(), nvim_oxi::Error> {
+    if !path.exists() {
+        return Err(Error::Custom(format!("File not found: {}", path.to_string_lossy())).into());
+    }
+
+    Ok(())
 }

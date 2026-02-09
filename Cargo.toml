@@ -1,6 +1,6 @@
 [package]
 name = "age_nvim"
-version = "2.0.3"
+version = "2.1.0"
 edition = "2021"
 license = "GPL-3.0-or-later"
 authors = ["Abhinandh S <abhinandhsuby@proton.me>"]
@@ -28,10 +28,11 @@ panic = 'abort'
 codegen-units = 1
 opt-level = 'z'
 lto = true
-debug = "none"
+debug = false
 strip = "symbols"
 debug-assertions = false
 overflow-checks = false
+incremental = false
 
 [lints.rust]
 unsafe_code = "forbid"

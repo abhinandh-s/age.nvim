@@ -12,7 +12,7 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Nvim(err) => write!(f, "Neovim Error: {err}"),
+            Error::Nvim(err) => write!(f, "{err}"),
             Error::Api(err) => write!(f, "API Error: {err}"),
             Error::Io(err) => write!(f, "IO Error: {err}"),
             Error::Other(err) => write!(f, "Error: {err}"),
@@ -74,5 +74,11 @@ impl From<Box<dyn std::error::Error>> for Error {
     fn from(err: Box<dyn std::error::Error>) -> Self {
         // Here, we convert the boxed error into a string and wrap it in AgeError::Other
         Error::Other(err.to_string())
+    }
+}
+
+impl From<age::DecryptError> for Error {
+    fn from(value: age::DecryptError) -> Self {
+        Error::Other(value.to_string())
     }
 }

@@ -91,7 +91,11 @@ return {
 
 ## Usage
 
-Age provides the `:Age` command with the following syntax:
+Age provides: 
+    - command - `:Age` 
+    - apis - `decrypt_to_string` and `decrypt_to_string_with_identities`
+
+The `:Age` command with the following syntax:
 
 ```vim
 :Age [action]
@@ -119,6 +123,56 @@ Age provides the `:Age` command with the following syntax:
 - Decrypts the currently opened encrypted file, and switches to the decrypted file. 
 ```vim
 :Age decrypt
+```
+
+You can use age api in nvim configs as:
+
+age.nvim provides 2 apis - 
+
+- `decrypt_to_string` -- this uses private key provided in setup config 
+- `decrypt_to_string_with_identities` -- takes from file
+
+```lua 
+return {
+  {
+    "folke/tokyonight.nvim",
+    dependencies = {
+      'abhinandh-s/age.nvim' -- # add age as dependency
+    },
+    config = function()
+      local age = require("age")
+
+      ---------
+      -- api 01 
+      ---------
+      age.setup({
+          private_key = "private_key",
+        })
+
+      -- Load the secret
+      local secret = age.decrypt_to_string(vim.fn.expand("~/.config/nvim/top_secret.txt.age"))
+
+      print(secret)
+
+      ---------
+      -- api 02 
+      ---------
+      local secret_02 = age.decrypt_to_string_with_identities(
+        vim.fn.expand("~/.config/nvim/top_secret.txt.age"),
+        {
+          vim.fn.expand("~/.local/share/age/key.txt"),
+        }
+      )
+
+      print(secret_02)
+    end,
+  },
+}
+```
+
+```lua 
+  -- trim whitespace if using for API tokens
+  local secret = age.decrypt_to_string(path):gsub("%s+", "")
 ```
 
 > [!NOTE]
