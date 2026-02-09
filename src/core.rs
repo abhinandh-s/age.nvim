@@ -39,7 +39,7 @@ impl App {
     ///
     /// Based on the command and argument passed, the corresponding action (such as
     /// setting the font or closing the window) is performed.
-    pub fn handle_command(&mut self, cmd: Command, raw_args: Vec<String>) -> OxiResult<()> {
+    pub fn handle_command(&mut self, cmd: Command, mut raw_args: Vec<String>) -> OxiResult<()> {
         match &cmd {
             Command::DecryptFile => {
                 let re = self.decrypt_current_file();
@@ -49,14 +49,13 @@ impl App {
                 Ok(())
             }
             Command::EncryptFile => {
+                let pub_key = self.config.public_key.to_string();
                 let recipients = if !raw_args.is_empty() {
-                    for i in &raw_args {
-                        print!("{i}")
+                    if validate_public_key(&pub_key).is_ok() {
+                        raw_args.push(pub_key)
                     }
                     raw_args
                 } else {
-                    let pub_key = self.config.public_key.to_string();
-                    print!("else branch {pub_key}");
                     validate_public_key(&pub_key)?;
                     vec![pub_key]
                 };
