@@ -43,16 +43,10 @@ impl App {
         match &cmd {
             Command::DecryptFile => {
                 let pub_key = self.config.private_key.to_string();
-                let identities: Vec<&dyn age::Identity> = if !raw_args.is_empty() {
+                let identities = if !raw_args.is_empty() {
                     crate::crypt::parse_identities_args(raw_args)?
-                        .iter()
-                        .map(|id| id as &dyn age::Identity)
-                        .collect::<Vec<_>>()
                 } else {
                     crate::crypt::parse_identities(&pub_key)?
-                        .iter()
-                        .map(|id| id as &dyn age::Identity)
-                        .collect::<Vec<_>>()
                 };
                 let re = self.decrypt_current_file(identities);
                 if let Err(err) = re {
@@ -107,7 +101,13 @@ impl App {
         Ok(())
     }
 
-    fn decrypt_current_file(&self, identities: Vec<&dyn age::Identity>) -> Result<(), Error> {
+    fn decrypt_current_file(&self, identities: Vec<age::x25519::Identity>) -> Result<(), Error> {
+        let mut pub_keys: Vec<&dyn age::Identity> = Vec::new();
+
+        for id in &identities {
+            pub_keys.push(id as &dyn age::Identity);
+        }
+
         let current_file_bufnr = nvim_oxi::api::get_current_buf();
         let current_file_path = current_file_bufnr.get_name()?;
         let current_file = current_file_path.to_string_lossy();
@@ -130,7 +130,7 @@ impl App {
                     decrypt_into_file(
                         &current_file_path,
                         path::Path::new(stem_name),
-                        identities.into_iter(),
+                        pub_keys.into_iter(),
                     )
                     .and_then(|_| {
                         let command = format!("edit {stem_name}");
