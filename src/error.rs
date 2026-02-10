@@ -1,3 +1,4 @@
+
 use nvim_oxi::{api::Error as OxiApiError, Error as OxiError};
 
 #[derive(Debug)]
@@ -79,6 +80,24 @@ impl From<Box<dyn std::error::Error>> for Error {
 
 impl From<age::DecryptError> for Error {
     fn from(value: age::DecryptError) -> Self {
+        Error::Other(value.to_string())
+    }
+}
+
+impl From<age::EncryptError> for Error {
+    fn from(value: age::EncryptError) -> Self {
+        Error::Other(value.to_string())
+    }
+}
+
+impl From<std::str::Utf8Error> for Error {
+    fn from(value: std::str::Utf8Error) -> Self {
+        Error::Other(value.to_string())
+    }
+}
+
+impl From<std::string::FromUtf8Error> for Error {
+    fn from(value: std::string::FromUtf8Error) -> Self {
         Error::Other(value.to_string())
     }
 }

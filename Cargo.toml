@@ -16,7 +16,7 @@ dev = []
 
 [dependencies]
 nvim-oxi = { version = "0.6.0", features = ["neovim-nightly"] } # neovim 11 or nightly
-age = "0.11.2"
+age = { version = "0.11.2", features = ["cli-common", "armor"] }
 chrono = "0.4.43"
 
 [lib]

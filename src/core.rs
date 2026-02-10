@@ -8,7 +8,7 @@ use nvim_oxi::api::opts::BufDeleteOpts;
 use nvim_oxi::{print, Dictionary, Result as OxiResult};
 
 use crate::command::Command;
-use crate::crypt::decrypt_file;
+use crate::crypt::decrypt_into_file;
 use crate::error::Error;
 use crate::{config::Config, crypt::encrypt_file};
 
@@ -39,7 +39,7 @@ impl App {
     ///
     /// Based on the command and argument passed, the corresponding action (such as
     /// setting the font or closing the window) is performed.
-    pub fn handle_command(&mut self, cmd: Command, mut raw_args: Vec<String>) -> OxiResult<()> {
+    pub fn handle_command(&mut self, cmd: Command, raw_args: Vec<String>) -> OxiResult<()> {
         match &cmd {
             Command::DecryptFile => {
                 let re = self.decrypt_current_file();
@@ -51,9 +51,6 @@ impl App {
             Command::EncryptFile => {
                 let pub_key = self.config.public_key.to_string();
                 let recipients = if !raw_args.is_empty() {
-                    if validate_public_key(&pub_key).is_ok() {
-                        raw_args.push(pub_key)
-                    }
                     raw_args
                 } else {
                     validate_public_key(&pub_key)?;
@@ -113,7 +110,7 @@ impl App {
                         .force(true) // Force deletion, ignoring unsaved changes
                         .build();
                     nvim_oxi::api::Buffer::delete(current_file_bufnr, &opts)?;
-                    decrypt_file(&current_file_path, path::Path::new(stem_name), private_key)
+                    decrypt_into_file(&current_file_path, path::Path::new(stem_name), private_key)
                         .and_then(|_| {
                             let command = format!("edit {stem_name}");
                             nvim_oxi::api::command(&command)?;
@@ -132,6 +129,8 @@ impl App {
     }
 
     fn encrypt_current_file(&self, raw_args: Vec<String>) -> Result<(), Error> {
+        print!("args: {:?}", raw_args);
+        let res = parse_recipients(raw_args.clone())?;
         let current_file_path = nvim_oxi::api::get_current_buf().get_name()?;
         let cfile = current_file_path.to_string_lossy();
         let list_buf = nvim_oxi::api::list_bufs();
@@ -275,9 +274,9 @@ fn parse_recipients(
                 let v = ctx.split_whitespace().collect::<Vec<&str>>();
                 // Use age::IdentityFile to parse the file (supports age & SSH formats)
                 for i in v {
-                    validate_public_key(i)?;
-                    let recipient = age::x25519::Recipient::from_str(i)?;
-                    recipients.push(Box::new(recipient));
+                    crate::crypt::parse_recipients(i)?.iter().for_each(|d| {
+                        recipients.push(Box::new(d.to_owned()));
+                    });
                 }
             } else {
                 return Err(format!("Arg '{}' is not a valid key or file path", input).into());
