@@ -37,7 +37,7 @@ Install Age using your favorite plugin manager. For example, with [lazy.nvim](ht
 > 
 > I take no responsibility for leaked passwords or API keys. It is on you to decide what age is, this approach, and making sure to not commit your identity keys.
 > 
-> Given below is the safest config implemention. Never hardcode private key
+> Given below is the safest config implemention. Never hardcode private key.
 
 ```lua 
  config = function()
@@ -46,7 +46,7 @@ Install Age using your favorite plugin manager. For example, with [lazy.nvim](ht
     public_key = "age1jdfddfsdfddgdfgggdfgfdgdfgfdggdfgfdgdfgdggdfdfgdfgg94p",
     key_file = vim.fn.expand("~/.config/sops/age/keys.txt"), -- no need to specify `private_key` now
   })
- nd
+ end
 ```
 
 ### Dependencies
