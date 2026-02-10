@@ -129,8 +129,6 @@ impl App {
     }
 
     fn encrypt_current_file(&self, raw_args: Vec<String>) -> Result<(), Error> {
-        print!("args: {:?}", raw_args);
-        let res = parse_recipients(raw_args.clone())?;
         let current_file_path = nvim_oxi::api::get_current_buf().get_name()?;
         let cfile = current_file_path.to_string_lossy();
         let list_buf = nvim_oxi::api::list_bufs();
@@ -150,7 +148,7 @@ impl App {
         }
         let binding = cfile.to_string();
         let extension_result = path::Path::new(&binding).extension();
-        let recipients = parse_recipients(raw_args)?;
+        let recipients = parse_args(raw_args)?;
         match extension_result {
             Some(ext) => {
                 let new_extension = ext.to_string_lossy().to_string() + ".age";
@@ -257,7 +255,7 @@ fn validate_path(path: &path::Path) -> Result<(), nvim_oxi::Error> {
     Ok(())
 }
 
-fn parse_recipients(
+fn parse_args(
     inputs: Vec<String>,
 ) -> Result<Vec<Box<dyn age::Recipient>>, Box<dyn std::error::Error>> {
     let mut recipients: Vec<Box<dyn age::Recipient>> = Vec::new();
