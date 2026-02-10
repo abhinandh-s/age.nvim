@@ -180,6 +180,25 @@ return {
   local secret = age.decrypt_to_string(path):gsub("%s+", "")
 ```
 
+> [!WARNING]
+> This utility can be required by other plugins as a dependency to load a secret from your dotfiles to pass to a plugin.
+>
+> For example, plugin that requires an API key. For those people who keep their dotfiles public but want to load an API key for its setup.
+> 
+> I take no responsibility for leaked passwords or API keys. It is on you to decide what age is, this approach, and making sure to not commit your identity keys.
+> 
+> Given below is the safest config implemention. Never hardcode private key
+
+```lua 
+ config = function()
+  require('age').setup({
+    encrypt_and_del = true,
+    public_key = "age1jdfddfsdfddgdfgggdfgfdgdfgfdggdfgfdgdfgdggdfdfgdfgg94p",
+    key_file = vim.fn.expand("~/.config/sops/age/keys.txt"), -- no need to specify `private_key` now
+  })
+ nd
+```
+
 > [!NOTE]
 > If you have any suggestions, please let me know.
 
