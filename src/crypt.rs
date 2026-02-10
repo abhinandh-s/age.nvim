@@ -1,18 +1,17 @@
 #![allow(dead_code)]
 // -- NOTE: functions declared here are supose to be independent.
 
-use age::x25519;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Write};
 use std::path::Path;
 use std::str::FromStr;
 
-pub fn decrypt_into_file(
+pub fn decrypt_into_file<'a>(
     input_path: &Path,
     output_path: &Path,
-    privkey: &str,
+    keys: impl Iterator<Item = &'a dyn age::Identity>,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let decrypted = decrypt_to_string(input_path, privkey)?;
+    let decrypted = decrypt_to_string(input_path, keys)?;
 
     // Write decrypted content to the output file
     let mut output_file = OpenOptions::new()
@@ -26,13 +25,12 @@ pub fn decrypt_into_file(
     Ok(())
 }
 
-pub fn decrypt_to_string(
+pub fn decrypt_to_string<'a>(
     input_path: &Path,
-    privkey: &str,
+    keys: impl Iterator<Item = &'a dyn age::Identity>,
 ) -> Result<String, Box<dyn std::error::Error>> {
     // Parse the private key
-    let identity = x25519::Identity::from_str(privkey)?;
-    let keys: Vec<&dyn age::Identity> = vec![&identity];
+//    let identity = x25519::Identity::from_str(privkey)?;
 
     // Decrypt the ciphertext
     let decryptor = decrypt_from_file(input_path, keys.into_iter())?;
@@ -170,6 +168,37 @@ pub fn encrypt_file(
     output_file.write_all(&encrypted)?;
 
     Ok(())
+}
+
+pub fn parse_identities_args(
+    input: Vec<String>,
+) -> Result<Vec<age::x25519::Identity>, crate::error::Error> {
+    let mut output = Vec::new();
+    for part in input {
+        if part.starts_with("age1") || part.starts_with("ssh-") {
+            output.extend(parse_identities(&part)?.into_iter());
+        } else {
+            let path = std::path::Path::new(&part);
+            let con = path.canonicalize()?;
+            print!("canonicalized path: {}", con.display());
+            if path.exists() {
+                let ctx = std::fs::read_to_string(path)?;
+                let v = ctx.split_whitespace().collect::<Vec<&str>>();
+                // Use age::IdentityFile to parse the file (supports age & SSH formats)
+                for i in v {
+                    crate::crypt::parse_identities(i)?.iter().for_each(|d| {
+                        output.push(d.to_owned());
+                    });
+                }
+            } else {
+                return Err(crate::error::Error::Other(format!(
+                    "Arg '{}' is not a valid key or file path",
+                    part
+                )));
+            }
+        }
+    }
+    Ok(output)
 }
 
 pub fn parse_identities(input: &str) -> Result<Vec<age::x25519::Identity>, crate::error::Error> {

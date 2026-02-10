@@ -42,7 +42,8 @@ impl App {
     pub fn handle_command(&mut self, cmd: Command, raw_args: Vec<String>) -> OxiResult<()> {
         match &cmd {
             Command::DecryptFile => {
-                let re = self.decrypt_current_file();
+                let identities = crate::crypt::parse_identities_args(raw_args)?;
+                let re = self.decrypt_current_file(identities);
                 if let Err(err) = re {
                     print!("{}", err);
                 }
@@ -88,9 +89,15 @@ impl App {
         Ok(())
     }
 
-    fn decrypt_current_file(&self) -> Result<(), Error> {
+    fn decrypt_current_file(&self, identities: Vec<age::x25519::Identity>) -> Result<(), Error> {
+        let mut pub_keys: Vec<&dyn age::Identity> = Vec::new();
+
+        for id in &identities {
+            pub_keys.push(id as &dyn age::Identity);
+        }
+
         let binding = self.config.private_key.to_string();
-        let private_key = binding.as_str();
+        let _private_key = binding.as_str();
         let current_file_bufnr = nvim_oxi::api::get_current_buf();
         let current_file_path = current_file_bufnr.get_name()?;
         let current_file = current_file_path.to_string_lossy();
@@ -110,7 +117,7 @@ impl App {
                         .force(true) // Force deletion, ignoring unsaved changes
                         .build();
                     nvim_oxi::api::Buffer::delete(current_file_bufnr, &opts)?;
-                    decrypt_into_file(&current_file_path, path::Path::new(stem_name), private_key)
+                    decrypt_into_file(&current_file_path, path::Path::new(stem_name), pub_keys.into_iter())
                         .and_then(|_| {
                             let command = format!("edit {stem_name}");
                             nvim_oxi::api::command(&command)?;
@@ -187,8 +194,9 @@ impl App {
 
         let private_key = self.config.private_key.to_string();
         validate_private_key(private_key.as_ref())?;
-
-        Ok(crate::crypt::decrypt_to_string(path, private_key.as_str())?)
+        let binding = crate::crypt::parse_identities(&private_key)?;
+        let id = binding.iter().map(|x| x as &dyn age::Identity);
+        Ok(crate::crypt::decrypt_to_string(path, id.into_iter())?)
     }
 
     pub fn decrypt_with_identities(
