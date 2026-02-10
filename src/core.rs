@@ -42,13 +42,31 @@ impl App {
     pub fn handle_command(&mut self, cmd: Command, raw_args: Vec<String>) -> OxiResult<()> {
         match &cmd {
             Command::DecryptFile => {
-                let identities = crate::crypt::parse_identities_args(raw_args)?;
+                let pub_key = self.config.private_key.to_string();
+                let identities: Vec<&dyn age::Identity> = if !raw_args.is_empty() {
+                    crate::crypt::parse_identities_args(raw_args)?
+                        .iter()
+                        .map(|id| id as &dyn age::Identity)
+                        .collect::<Vec<_>>()
+                } else {
+                    crate::crypt::parse_identities(&pub_key)?
+                        .iter()
+                        .map(|id| id as &dyn age::Identity)
+                        .collect::<Vec<_>>()
+                };
                 let re = self.decrypt_current_file(identities);
                 if let Err(err) = re {
                     print!("{}", err);
                 }
                 Ok(())
             }
+            // ```vim
+            //
+            // :Age encrypt " uses public key from config
+            // :Age encrypt age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p " public keys
+            // :Age encrypt /path/to/recipents.txt " list for public keys
+            //
+            // ```
             Command::EncryptFile => {
                 let pub_key = self.config.public_key.to_string();
                 let recipients = if !raw_args.is_empty() {
@@ -89,15 +107,7 @@ impl App {
         Ok(())
     }
 
-    fn decrypt_current_file(&self, identities: Vec<age::x25519::Identity>) -> Result<(), Error> {
-        let mut pub_keys: Vec<&dyn age::Identity> = Vec::new();
-
-        for id in &identities {
-            pub_keys.push(id as &dyn age::Identity);
-        }
-
-        let binding = self.config.private_key.to_string();
-        let _private_key = binding.as_str();
+    fn decrypt_current_file(&self, identities: Vec<&dyn age::Identity>) -> Result<(), Error> {
         let current_file_bufnr = nvim_oxi::api::get_current_buf();
         let current_file_path = current_file_bufnr.get_name()?;
         let current_file = current_file_path.to_string_lossy();
@@ -117,12 +127,16 @@ impl App {
                         .force(true) // Force deletion, ignoring unsaved changes
                         .build();
                     nvim_oxi::api::Buffer::delete(current_file_bufnr, &opts)?;
-                    decrypt_into_file(&current_file_path, path::Path::new(stem_name), pub_keys.into_iter())
-                        .and_then(|_| {
-                            let command = format!("edit {stem_name}");
-                            nvim_oxi::api::command(&command)?;
-                            Ok(())
-                        })?;
+                    decrypt_into_file(
+                        &current_file_path,
+                        path::Path::new(stem_name),
+                        identities.into_iter(),
+                    )
+                    .and_then(|_| {
+                        let command = format!("edit {stem_name}");
+                        nvim_oxi::api::command(&command)?;
+                        Ok(())
+                    })?;
                 }
             }
             Some(_) => {
