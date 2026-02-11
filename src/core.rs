@@ -1,7 +1,5 @@
 use age::secrecy::ExposeSecret;
 use std::env::current_dir;
-use std::fs::read_to_string;
-use std::str::FromStr;
 use std::{fs, path};
 
 use nvim_oxi::api::opts::BufDeleteOpts;
@@ -10,7 +8,7 @@ use nvim_oxi::{print, Dictionary, Result as OxiResult};
 use crate::command::Command;
 use crate::crypt::decrypt_into_file;
 use crate::error::Error;
-use crate::{config::Config, crypt::encrypt_file};
+use crate::{config::Config, crypt::encrypt_into_file};
 
 #[derive(Debug)]
 pub struct App {
@@ -39,17 +37,20 @@ impl App {
     ///
     /// Based on the command and argument passed, the corresponding action (such as
     /// setting the font or closing the window) is performed.
-    pub fn handle_command(&mut self, cmd: Command, raw_args: Vec<String>) -> OxiResult<()> {
+    pub fn handle_command(
+        &mut self,
+        cmd: Command,
+        raw_args: Vec<String>,
+    ) -> Result<(), crate::error::Error> {
+        let filenames = if raw_args.is_empty() {
+            vec![self.config.key_file.to_string()]
+        } else {
+            raw_args
+        };
+
         match &cmd {
             Command::DecryptFile => {
-                let pub_key = self.config.private_key.to_string();
-                let identities = if !raw_args.is_empty() {
-                    crate::crypt::parse_identities_args(raw_args)?
-                } else {
-                    crate::crypt::parse_identities(&pub_key)?
-                };
-                let re = self.decrypt_current_file(identities);
-                if let Err(err) = re {
+                if let Err(err) = self.decrypt_current_file(filenames) {
                     print!("{}", err);
                 }
                 Ok(())
@@ -57,20 +58,11 @@ impl App {
             // ```vim
             //
             // :Age encrypt " uses public key from config
-            // :Age encrypt age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p " public keys
             // :Age encrypt /path/to/recipents.txt " list for public keys
             //
             // ```
             Command::EncryptFile => {
-                let pub_key = self.config.public_key.to_string();
-                let recipients = if !raw_args.is_empty() {
-                    raw_args
-                } else {
-                    validate_public_key(&pub_key)?;
-                    vec![pub_key]
-                };
-                let re = self.encrypt_current_file(recipients);
-                if let Err(err) = re {
+                if let Err(err) = self.encrypt_current_file(filenames) {
                     print!("{}", err);
                 }
                 Ok(())
@@ -101,13 +93,7 @@ impl App {
         Ok(())
     }
 
-    fn decrypt_current_file(&self, identities: Vec<age::x25519::Identity>) -> Result<(), Error> {
-        let mut pub_keys: Vec<&dyn age::Identity> = Vec::new();
-
-        for id in &identities {
-            pub_keys.push(id as &dyn age::Identity);
-        }
-
+    fn decrypt_current_file(&self, filenames: Vec<String>) -> Result<(), Error> {
         let current_file_bufnr = nvim_oxi::api::get_current_buf();
         let current_file_path = current_file_bufnr.get_name()?;
         let current_file = current_file_path.to_string_lossy();
@@ -127,16 +113,12 @@ impl App {
                         .force(true) // Force deletion, ignoring unsaved changes
                         .build();
                     nvim_oxi::api::Buffer::delete(current_file_bufnr, &opts)?;
-                    decrypt_into_file(
-                        &current_file_path,
-                        path::Path::new(stem_name),
-                        pub_keys.into_iter(),
-                    )
-                    .and_then(|_| {
-                        let command = format!("edit {stem_name}");
-                        nvim_oxi::api::command(&command)?;
-                        Ok(())
-                    })?;
+                    decrypt_into_file(&current_file_path, path::Path::new(stem_name), filenames)
+                        .and_then(|_| {
+                            let command = format!("edit {stem_name}");
+                            nvim_oxi::api::command(&command)?;
+                            Ok(())
+                        })?;
                 }
             }
             Some(_) => {
@@ -149,7 +131,7 @@ impl App {
         Ok(())
     }
 
-    fn encrypt_current_file(&self, raw_args: Vec<String>) -> Result<(), Error> {
+    fn encrypt_current_file(&self, filenames: Vec<String>) -> Result<(), Error> {
         let current_file_path = nvim_oxi::api::get_current_buf().get_name()?;
         let cfile = current_file_path.to_string_lossy();
         let list_buf = nvim_oxi::api::list_bufs();
@@ -169,14 +151,13 @@ impl App {
         }
         let binding = cfile.to_string();
         let extension_result = path::Path::new(&binding).extension();
-        let recipients = parse_args(raw_args)?;
         match extension_result {
             Some(ext) => {
                 let new_extension = ext.to_string_lossy().to_string() + ".age";
-                encrypt_file(
+                encrypt_into_file(
                     path::Path::new(&cfile.to_string()),
                     &path::Path::new(&cfile.to_string()).with_extension(new_extension),
-                    recipients,
+                    filenames,
                 )
                 .and_then(|_| {
                     if self.config.encrypt_and_del {
@@ -186,10 +167,10 @@ impl App {
                 })?;
             }
             None => {
-                encrypt_file(
+                encrypt_into_file(
                     path::Path::new(&cfile.to_string()),
                     &path::Path::new(&cfile.to_string()).with_extension("age"),
-                    recipients,
+                    filenames,
                 )?;
             }
         }
@@ -203,70 +184,56 @@ impl App {
         // Logic: If private_key_file is set, use that. Otherwise use the string.
         if !self.config.key_file.is_empty() {
             let id_file = self.config.key_file.to_string();
-            return self.decrypt_with_identities(file_path, vec![id_file]);
+            return crate::crypt::decrypt_to_string(path, vec![id_file]);
         }
 
-        let private_key = self.config.private_key.to_string();
-        validate_private_key(private_key.as_ref())?;
-        let binding = crate::crypt::parse_identities(&private_key)?;
-        let id = binding.iter().map(|x| x as &dyn age::Identity);
-        Ok(crate::crypt::decrypt_to_string(path, id.into_iter())?)
+        Err(Error::Other(
+            "the field `key_file` in config is missing".to_owned(),
+        ))
+    }
+
+    pub fn decrypt_from_string(&self, encrypted: String) -> Result<String, Error> {
+        // Logic: If private_key_file is set, use that. Otherwise use the string.
+        if !self.config.key_file.is_empty() {
+            let id_file = self.config.key_file.to_string();
+            return crate::crypt::decrypt_from_string(encrypted, vec![id_file]);
+        }
+
+        Err(Error::Other(
+            "the field `key_file` in config is missing".to_owned(),
+        ))
     }
 
     pub fn decrypt_with_identities(
         &self,
         file_path: String,
-        identity_paths: Vec<String>,
+        key_files: Vec<String>,
     ) -> Result<String, Error> {
         let path = path::Path::new(&file_path);
         validate_path(path)?;
 
-        let mut identities = Vec::new();
+        // let mut identities = Vec::new();
+        //
+        // for id_path in key_files {
+        //     let p = path::Path::new(&id_path);
+        //     if !p.exists() {
+        //         return Err(Error::Custom(format!("Identity file not found: {id_path}")));
+        //     }
+        //
+        //     // Use age::IdentityFile to parse the file (supports age & SSH formats)
+        //     let identity_file =
+        //         age::IdentityFile::from_file(p.to_string_lossy().to_string())?.into_identities()?;
+        //
+        //     // IdentityFile implements into_identities()
+        //     identities.extend(identity_file);
+        // }
+        //
+        // if identities.is_empty() {
+        //     return Err(Error::Custom("No valid identities provided".to_owned()));
+        // }
 
-        for id_path in identity_paths {
-            let p = path::Path::new(&id_path);
-            if !p.exists() {
-                return Err(Error::Custom(format!("Identity file not found: {id_path}")));
-            }
-
-            // Use age::IdentityFile to parse the file (supports age & SSH formats)
-            let identity_file =
-                age::IdentityFile::from_file(p.to_string_lossy().to_string())?.into_identities()?;
-
-            // IdentityFile implements into_identities()
-            identities.extend(identity_file);
-        }
-
-        if identities.is_empty() {
-            return Err(Error::Custom("No valid identities provided".to_owned()));
-        }
-
-        Ok(crate::crypt::decrypt_with_identities(path, identities)?)
+        crate::crypt::decrypt_to_string(path, key_files)
     }
-}
-
-fn validate_private_key(key: &str) -> Result<(), nvim_oxi::Error> {
-    if key.is_empty() {
-        return Err(Error::Custom("Private key not configured".to_owned()).into());
-    }
-
-    if !key.starts_with("AGE-SECRET-KEY-") {
-        return Err(Error::Custom("provided key is not a vaild Private key".to_owned()).into());
-    }
-
-    Ok(())
-}
-
-fn validate_public_key(key: &str) -> Result<(), nvim_oxi::Error> {
-    if key.is_empty() {
-        return Err(Error::Custom("Public key not configured".to_owned()).into());
-    }
-
-    if !key.starts_with("age") {
-        return Err(Error::Custom("provided key is not a vaild Public key".to_owned()).into());
-    }
-
-    Ok(())
 }
 
 fn validate_path(path: &path::Path) -> Result<(), nvim_oxi::Error> {
@@ -275,34 +242,4 @@ fn validate_path(path: &path::Path) -> Result<(), nvim_oxi::Error> {
     }
 
     Ok(())
-}
-
-fn parse_args(
-    inputs: Vec<String>,
-) -> Result<Vec<Box<dyn age::Recipient>>, Box<dyn std::error::Error>> {
-    let mut recipients: Vec<Box<dyn age::Recipient>> = Vec::new();
-
-    for input in inputs {
-        if input.starts_with("age1") || input.starts_with("ssh-") {
-            // it's a direct public key
-            let recipient = age::x25519::Recipient::from_str(input.as_str())?;
-            recipients.push(Box::new(recipient));
-        } else {
-            let path = std::path::Path::new(input.as_str());
-            if path.exists() {
-                let ctx = read_to_string(path)?;
-                let v = ctx.split_whitespace().collect::<Vec<&str>>();
-                // Use age::IdentityFile to parse the file (supports age & SSH formats)
-                for i in v {
-                    crate::crypt::parse_recipients(i)?.iter().for_each(|d| {
-                        recipients.push(Box::new(d.to_owned()));
-                    });
-                }
-            } else {
-                return Err(format!("Arg '{}' is not a valid key or file path", input).into());
-            }
-        }
-    }
-
-    Ok(recipients)
 }

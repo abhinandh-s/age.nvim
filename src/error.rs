@@ -1,4 +1,3 @@
-
 use nvim_oxi::{api::Error as OxiApiError, Error as OxiError};
 
 #[derive(Debug)]
@@ -73,7 +72,6 @@ impl From<&str> for Error {
 
 impl From<Box<dyn std::error::Error>> for Error {
     fn from(err: Box<dyn std::error::Error>) -> Self {
-        // Here, we convert the boxed error into a string and wrap it in AgeError::Other
         Error::Other(err.to_string())
     }
 }
@@ -98,6 +96,12 @@ impl From<std::str::Utf8Error> for Error {
 
 impl From<std::string::FromUtf8Error> for Error {
     fn from(value: std::string::FromUtf8Error) -> Self {
+        Error::Other(value.to_string())
+    }
+}
+
+impl From<std::env::VarError> for Error {
+    fn from(value: std::env::VarError) -> Self {
         Error::Other(value.to_string())
     }
 }

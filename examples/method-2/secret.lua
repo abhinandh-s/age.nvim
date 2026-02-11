@@ -1,5 +1,0 @@
--- ~/.config/nvim/lua/key.lua
-
-return {
-  private_key = "AGE-SECRET-KEY-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-}

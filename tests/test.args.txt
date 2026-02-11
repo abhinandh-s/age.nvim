@@ -1,0 +1,6 @@
+:Age decrypt ~/git/age.nvim/tests/test_key.txt 
+:Age decrypt /home/abhi/git/age.nvim/tests/test_key.txt 
+:Age decrypt ../../age.nvim/tests/test_key.txt 
+:Age decrypt ./test_key.txt 
+:Age decrypt test_key.txt 
+

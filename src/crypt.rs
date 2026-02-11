@@ -1,88 +1,16 @@
 #![allow(dead_code)]
 // -- NOTE: functions declared here are supose to be independent.
-
-use std::fs::{File, OpenOptions};
+//
+// x => vec<u8> | low level
+// x_from_files | high level
+// x_to_string => String [pub api] // takes key_files from config
+// x_from_string => String [pub api] // takes key_files from config
+// x_to_string_with_identities => String [pub api] => both body is same | x_to_string is enough here
+// x_into_file => () [pub Cmd]
+//
+use std::fs::OpenOptions;
 use std::io::{Read, Write};
 use std::path::Path;
-use std::str::FromStr;
-
-pub fn decrypt_into_file<'a>(
-    input_path: &Path,
-    output_path: &Path,
-    keys: impl Iterator<Item = &'a dyn age::Identity>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let decrypted = decrypt_to_string(input_path, keys)?;
-
-    // Write decrypted content to the output file
-    let mut output_file = OpenOptions::new()
-        .create(true)
-        .truncate(true)
-        .write(true)
-        .open(output_path)?;
-
-    output_file.write_all(decrypted.as_bytes())?;
-
-    Ok(())
-}
-
-pub fn decrypt_to_string<'a>(
-    input_path: &Path,
-    keys: impl Iterator<Item = &'a dyn age::Identity>,
-) -> Result<String, Box<dyn std::error::Error>> {
-    // Parse the private key
-//    let identity = x25519::Identity::from_str(privkey)?;
-
-    // Decrypt the ciphertext
-    let decryptor = decrypt_from_file(input_path, keys.into_iter())?;
-    Ok(decryptor)
-}
-
-pub fn decrypt_with_identities(
-    input_path: &Path,
-    identities: Vec<Box<dyn age::Identity>>,
-) -> Result<String, Box<dyn std::error::Error>> {
-    let encrypted_file = File::open(input_path)?;
-
-    // Decrypt using the provided list of identities
-    let decryptor = age::Decryptor::new(encrypted_file)?;
-
-    // We pass the vector of boxed identities as an iterator
-    let mut reader = decryptor.decrypt(identities.iter().map(|i| i.as_ref()))?;
-
-    let mut decrypted = String::new();
-    reader.read_to_string(&mut decrypted)?;
-
-    Ok(decrypted)
-}
-
-// decrypt the obtained ciphertext to the plaintext.
-// this can manage both bytes and armored
-//
-// ```
-// let key = age::x25519::Identity::generate();
-// let keys: Vec<&dyn age::Identity> = vec![&key];
-// ```
-fn decrypt<'a, R: std::io::Read>(
-    keys: impl Iterator<Item = &'a dyn age::Identity>,
-    encrypted: R,
-) -> Result<String, crate::error::Error> {
-    let reader = age::armor::ArmoredReader::new(encrypted);
-    let decryptor = age::Decryptor::new(reader)?;
-    let mut decrypted_bytes = vec![];
-    let mut reader = decryptor.decrypt(keys)?;
-
-    reader.read_to_end(&mut decrypted_bytes)?;
-
-    Ok(String::from_utf8(decrypted_bytes)?)
-}
-
-fn decrypt_from_file<'a>(
-    path: &Path,
-    keys: impl Iterator<Item = &'a dyn age::Identity>,
-) -> Result<String, crate::error::Error> {
-    let file = std::fs::File::open(path)?;
-    decrypt(keys, file)
-}
 
 // decrypt the obtained ciphertext to the plaintext.
 //
@@ -97,206 +25,255 @@ fn encrypt<'a>(
 ) -> Result<Vec<u8>, crate::error::Error> {
     let encryptor = age::Encryptor::with_recipients(recipients)?;
 
-    let mut encrypted = vec![];
-    let mut writer = encryptor.wrap_output(&mut encrypted)?;
+    let mut encrypted: Vec<u8> = vec![];
+    let mut writer = encryptor.wrap_output(age::armor::ArmoredWriter::wrap_output(
+        &mut encrypted,
+        age::armor::Format::AsciiArmor,
+    )?)?;
     writer.write_all(plaintext)?;
-    writer.finish()?;
+    writer.finish().and_then(|armor| armor.finish())?;
 
     Ok(encrypted)
 }
 
-pub fn encrypt_to_armored_string<'a>(
-    recipients: impl Iterator<Item = &'a dyn age::Recipient>,
-    plaintext: impl Into<&'a [u8]>,
-) -> Result<String, Box<dyn std::error::Error>> {
-    let encrypted_bytes: Vec<u8> = encrypt(recipients, plaintext.into())?;
+pub fn encrypt_from_files(
+    path: &Path,
+    key_files: Vec<String>,
+) -> Result<Vec<u8>, crate::error::Error> {
+    let mut file = std::fs::File::open(path)?;
+    let mut plaintext = Vec::new();
+    file.read_to_end(&mut plaintext)?;
 
-    // Prepare a buffer for the ASCII text
-    let mut output = Vec::new();
+    let recipients = get_recipients(key_files)?;
 
-    // Wrap the output in the ArmoredWriter
-    let mut armor_writer =
-        age::armor::ArmoredWriter::wrap_output(&mut output, age::armor::Format::AsciiArmor)?;
-
-    // Write binary data and—crucially—call finish()
-    armor_writer.write_all(&encrypted_bytes)?;
-    armor_writer.finish()?;
-
-    // Convert the now-armored Vec<u8> into a String}
-    Ok(String::from_utf8(output)?)
+    encrypt(
+        recipients.iter().map(|r| r.as_ref() as &dyn age::Recipient),
+        &plaintext[..],
+    )
 }
 
-pub fn encrypt_to_armored_as_bytes<'a>(
-    recipients: impl Iterator<Item = &'a dyn age::Recipient>,
-    plaintext: impl Into<&'a [u8]>,
-) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
-    let encrypted_bytes: Vec<u8> = encrypt(recipients, plaintext.into())?;
+// Wrapper around encrypt
+fn encrypted_to_string(path: &Path, key_files: Vec<String>) -> Result<String, crate::error::Error> {
+    Ok(String::from_utf8(encrypt_from_files(path, key_files)?)?)
+}
 
-    // Prepare a buffer for the ASCII text
-    let mut output = Vec::new();
+// Wrapper around encrypt
+fn encrypted_from_string(
+    plaintext: String,
+    key_files: Vec<String>,
+) -> Result<String, crate::error::Error> {
+    let binding = get_recipients(key_files)?;
+    let keys = binding.iter().map(|f| f.as_ref() as &dyn age::Recipient);
 
-    // Wrap the output in the ArmoredWriter
-    let mut armor_writer =
-        age::armor::ArmoredWriter::wrap_output(&mut output, age::armor::Format::AsciiArmor)?;
+    let decrypted = encrypt(keys, plaintext.as_bytes())?;
 
-    // Write binary data and—crucially—call finish()
-    armor_writer.write_all(&encrypted_bytes)?;
-    armor_writer.finish()?;
+    Ok(String::from_utf8(decrypted)?)
+}
 
-    // Convert the now-armored Vec<u8> into a String}
+fn get_recipients(
+    key_files: Vec<String>,
+) -> Result<Vec<Box<dyn age::Recipient + Send + 'static>>, crate::error::Error> {
+    let mut output: Vec<Box<dyn age::Recipient + Send + 'static>> = Vec::new();
+    for path in key_files {
+        let full_path = get_full_path(&path)?.to_string_lossy().to_string();
+        output.extend(age::IdentityFile::from_file(full_path)?.to_recipients()?);
+    }
     Ok(output)
 }
 
-pub fn encrypt_file(
-    input_path: &Path,
-    output_path: &Path,
-    recipients: Vec<Box<dyn age::Recipient>>,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let mut input_file = File::open(input_path)?;
-    let mut plaintext = Vec::new();
-    input_file.read_to_end(&mut plaintext)?;
-
-    let encrypted =
-        encrypt_to_armored_as_bytes(recipients.iter().map(|x| x.as_ref()), &plaintext[..])?;
+pub fn encrypt_into_file(
+    plaintext: &Path,
+    out_path: &Path,
+    key_files: Vec<String>,
+) -> Result<(), crate::error::Error> {
+    let encrypted = encrypted_to_string(plaintext, key_files)?;
 
     // Write encrypted content to the output file
     let mut output_file = OpenOptions::new()
         .create(true)
         .truncate(true)
         .write(true)
-        .open(output_path)?;
-    output_file.write_all(&encrypted)?;
+        .open(out_path)?;
+    output_file.write_all(encrypted.as_bytes())?;
 
     Ok(())
 }
 
-pub fn parse_identities_args(
-    input: Vec<String>,
-) -> Result<Vec<age::x25519::Identity>, crate::error::Error> {
+// decrypt the obtained ciphertext to the plaintext.
+// this can manage both bytes and armored
+//
+// ```
+// let key = age::x25519::Identity::generate();
+// let keys: Vec<&dyn age::Identity> = vec![&key];
+// ```
+fn decrypt<'a, R: std::io::Read>(
+    keys: impl Iterator<Item = &'a dyn age::Identity>,
+    encrypted: R,
+) -> Result<Vec<u8>, crate::error::Error> {
+    let reader = age::armor::ArmoredReader::new(encrypted);
+    let decryptor = age::Decryptor::new(reader)?;
+    let mut decrypted_bytes = vec![];
+    let mut reader = decryptor.decrypt(keys)?;
+
+    reader.read_to_end(&mut decrypted_bytes)?;
+
+    Ok(decrypted_bytes)
+}
+
+fn decrypt_from_files(path: &Path, filenames: Vec<String>) -> Result<Vec<u8>, crate::error::Error> {
+    let file = std::fs::File::open(path)?;
+    let binding = get_identities(filenames)?;
+    let keys = binding.iter().map(|f| f.as_ref() as &dyn age::Identity);
+
+    decrypt(keys, file)
+}
+/// take keyfile from config
+pub fn decrypt_to_string(
+    input_path: &Path,
+    key_files: Vec<String>,
+) -> Result<String, crate::error::Error> {
+    let decrypted = decrypt_from_files(input_path, key_files)?;
+
+    Ok(String::from_utf8(decrypted)?)
+}
+/// take keyfile from config
+pub fn decrypt_from_string(
+    encrypted: String,
+    key_files: Vec<String>,
+) -> Result<String, crate::error::Error> {
+    let binding = get_identities(key_files)?;
+    let keys = binding.iter().map(|f| f.as_ref() as &dyn age::Identity);
+
+    let decrypted = decrypt(keys, std::io::Cursor::new(encrypted.as_bytes()))?;
+
+    Ok(String::from_utf8(decrypted)?)
+}
+pub fn decrypt_into_file(
+    input_path: &Path,
+    output_path: &Path,
+    filenames: Vec<String>,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let decrypted = decrypt_to_string(input_path, filenames)?;
+
+    // Write decrypted content to the output file
+    let mut output_file = OpenOptions::new()
+        .create(true)
+        .truncate(true)
+        .write(true)
+        .open(output_path)?;
+
+    output_file.write_all(decrypted.as_bytes())?;
+
+    Ok(())
+}
+
+/// Must be list of files
+pub fn get_identities(
+    filenames: Vec<String>,
+) -> Result<Vec<Box<dyn age::Identity>>, Box<dyn std::error::Error>> {
     let mut output = Vec::new();
-    for part in input {
-        if part.starts_with("age1") || part.starts_with("ssh-") {
-            output.extend(parse_identities(&part)?.into_iter());
-        } else {
-            let path = std::path::Path::new(&part);
-            let con = path.canonicalize()?;
-            print!("canonicalized path: {}", con.display());
-            if path.exists() {
-                let ctx = std::fs::read_to_string(path)?;
-                let v = ctx.split_whitespace().collect::<Vec<&str>>();
-                // Use age::IdentityFile to parse the file (supports age & SSH formats)
-                for i in v {
-                    crate::crypt::parse_identities(i)?.iter().for_each(|d| {
-                        output.push(d.to_owned());
-                    });
-                }
-            } else {
-                return Err(crate::error::Error::Other(format!(
-                    "Arg '{}' is not a valid key or file path",
-                    part
-                )));
-            }
-        }
+    for filename in filenames {
+        let full_path = get_full_path(&filename)?.to_string_lossy().to_string();
+        output.extend(age::IdentityFile::from_file(full_path)?.into_identities()?);
     }
     Ok(output)
 }
 
-pub fn parse_identities(input: &str) -> Result<Vec<age::x25519::Identity>, crate::error::Error> {
-    let mut output = Vec::new();
+/// converts users input: ~/some/file.txt => /home/user/some/file.txt
+fn get_full_path(input: &str) -> Result<std::path::PathBuf, crate::error::Error> {
+    let mut path_buf = std::path::PathBuf::new();
 
-    for line in input.lines() {
-        if !line.starts_with("#") {
-            let parts = line.split_whitespace();
-            for part in parts {
-                if part.starts_with("AGE-SECRET-KEY-") {
-                    output.push(age::x25519::Identity::from_str(part)?);
-                }
-            }
-        }
+    // 1. expand Tilde
+    if input.starts_with("~/") {
+        let home = std::env::var("HOME")?;
+        path_buf.push(home);
+        path_buf.push(input.strip_prefix("~/").ok_or(crate::error::Error::Other(
+            "Can't strip ~/from path".to_owned(),
+        ))?);
+    } else {
+        path_buf.push(input);
     }
-    Ok(output)
-}
 
-pub fn parse_recipients(input: &str) -> Result<Vec<age::x25519::Recipient>, crate::error::Error> {
-    let mut output = Vec::new();
-
-    let parts = input.split_whitespace();
-    for part in parts {
-        if part.starts_with("age1") {
-            output.push(age::x25519::Recipient::from_str(part)?);
-        }
+    // 2. Use canonicalize to:
+    //    - Turn relative into absolute
+    //    - Resolve ".." and "."
+    //    - Check if the file actually exists
+    let absolute_path = std::fs::canonicalize(&path_buf)?;
+    if absolute_path.is_file() {
+        return Ok(absolute_path);
     }
-    Ok(output)
+    Err(crate::error::Error::Other("Can't parse path".to_owned()))
 }
 
 #[cfg(test)]
 mod test {
-    use super::encrypt;
+
     use crate::crypt::{
-        decrypt_from_file, encrypt_to_armored_string, parse_identities, parse_recipients,
+        decrypt_from_string, decrypt_into_file, decrypt_to_string, encrypt_into_file,
+        encrypted_from_string, encrypted_to_string, get_full_path,
     };
 
     #[test]
-    fn core() -> Result<(), crate::error::Error> {
-        let key = age::x25519::Identity::generate();
-        let pubkey = key.to_public();
-        let pubkeys: Vec<&dyn age::Recipient> = vec![&pubkey];
+    fn into_file() -> Result<(), crate::error::Error> {
+        let filenames = vec!["tests/test_key.txt".to_owned()];
+        let input = std::path::Path::new("tests/some/dir/file.txt");
+        let encrypted = std::path::Path::new("tests/some/dir/file.txt.age");
+        let decrypted = std::path::Path::new("tests/some/dir/file_decrypted.txt");
 
-        let plaintext = b"Hello world!";
-        let encrypted = encrypt(pubkeys.clone().into_iter(), plaintext)?;
+        encrypt_into_file(input, encrypted, filenames.clone())?;
+        decrypt_into_file(encrypted, decrypted, filenames)?;
 
-        let keys: Vec<&dyn age::Identity> = vec![&key];
+        let original = std::fs::read_to_string(input)?;
+        let result = std::fs::read_to_string(decrypted)?;
 
-        let decrypted = super::decrypt(keys.clone().into_iter(), &encrypted[..])?;
+        assert_eq!(original, result);
 
-        let st: String = "Hello world!".into();
-        assert_eq!(decrypted, st);
+        Ok(())
+    }
+    #[test]
+    fn to_and_as_string() -> Result<(), crate::error::Error> {
+        let key_files = vec!["tests/test_key.txt".to_owned()];
+        let input = std::path::Path::new("tests/some/dir/file.txt");
+        let encrypted = std::path::Path::new("tests/some/dir/file.txt.age");
+        let original = std::fs::read_to_string(input)?;
+
+        let e = encrypted_to_string(input, key_files.clone())?;
+        let df = decrypt_from_string(e, key_files.clone())?;
+        assert_eq!(original, df);
+
+        let d = decrypt_to_string(encrypted, key_files.clone())?;
+        assert_eq!(original, d);
+
+        let enc = encrypted_from_string("Some secret text.\n".to_owned(), key_files.clone())?;
+        let ed = decrypt_from_string(enc, key_files.clone())?;
+        assert_eq!(original, ed);
 
         Ok(())
     }
 
     #[test]
-    fn core_02() -> Result<(), crate::error::Error> {
-        let mut pubkeys: Vec<&dyn age::Recipient> = vec![];
-        let mut keys: Vec<&dyn age::Identity> = vec![];
+    #[ignore = "Only works on my machine"]
+    fn path_fix() {
+        let shortcut = "~/git/test_01/test/some/file.txt";
+        let rooted = "/home/abhi/git/test_01/test/some/file.txt"; // [x]
+        let deep_reletive = "./test/some/file.txt";
+        let deep_reletive_02 = "../test_01/test/some/file.txt";
+        let reletive = "test/some/file.txt";
 
-        // Normal encryption
-        let path_01 = std::path::Path::new("tests/i_am_groot.txt.age");
-        // Armored encryption
-        let path_02 = std::path::Path::new("tests/i_am_groot_armored.txt.age");
+        for i in [shortcut, rooted, reletive, deep_reletive, deep_reletive_02] {
+            assert!(get_full_path(i).is_ok())
+        }
+    }
 
-        // key.txt
-        let binding = parse_identities(include_str!("../tests/test_key.txt"))?;
-        binding.iter().for_each(|id| {
-            keys.push(id);
-        });
+    #[test]
+    fn identities_file() -> Result<(), crate::error::Error> {
+        let key_files = vec!["~/.config/sops/age/keys.txt".to_owned()];
 
-        let path_01_decrypted = decrypt_from_file(path_01, keys.clone().into_iter())?;
-        assert_eq!(path_01_decrypted, String::from("I am groot.\n"));
+        let enc = encrypted_from_string("plaintext".to_owned(), key_files.clone())?;
 
-        let path_02_decrypted = decrypt_from_file(path_02, keys.clone().into_iter())?;
-        assert_eq!(path_02_decrypted, String::from("I am groot.\n"));
+        let dec = decrypt_from_string(enc, key_files.clone())?;
 
-        let parsed_pub_keys = parse_recipients(include_str!("../tests/test_key.txt"))?;
-        parsed_pub_keys.iter().for_each(|re| {
-            pubkeys.push(re);
-        });
-
-        let path_02_encrypted =
-            encrypt_to_armored_string(pubkeys.clone().into_iter(), path_01_decrypted.as_bytes())?;
-        let path_02_ctx = include_str!("../tests/i_am_groot_armored.txt.age");
-
-        const STARTS_WITH: &str =
-            "-----BEGIN AGE ENCRYPTED FILE-----\nYWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOS";
-        assert_eq!(
-            String::from_utf8(path_02_encrypted.into())?.starts_with(STARTS_WITH),
-            path_02_ctx.to_owned().starts_with(STARTS_WITH)
-        );
-
-        let path_01_encrypted = encrypt(pubkeys.clone().into_iter(), path_01_decrypted.as_bytes())?;
-        let path_01_ctx = include_bytes!("../tests/i_am_groot.txt.age");
-
-        assert_eq!(path_01_encrypted[..32], path_01_ctx.to_vec()[..32]);
+        assert_eq!("plaintext".to_owned(), dec);
 
         Ok(())
     }

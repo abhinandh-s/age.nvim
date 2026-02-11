@@ -16,6 +16,19 @@
 - [Usage](#usage)  
 - [What is age?](#what-is-age)  
 
+## Breaking Changes from v.2.2.0
+
+Due to security conserns the fields `private_key` and `public_key` in config has been removed. Instead user can specify `key_file`.
+
+```diff 
+  require('age').setup({
+        encrypt_and_del = true, -- will remove the original file after encrypting.
+-       private_key = "private_key"
+-       public_key = "public_key"
++       key_file = vim.fn.expand("~/.config/sops/age/keys.txt"),
+  })
+```
+
 ## Installation
 
 > [!WARNING]
@@ -43,7 +56,6 @@ Install Age using your favorite plugin manager. For example, with [lazy.nvim](ht
  config = function()
   require('age').setup({
     encrypt_and_del = true,
-    public_key = "age1jdfddfsdfddgdfgggdfgfdgdfgfdggdfgfdgdfgdggdfdfgdfgg94p",
     key_file = vim.fn.expand("~/.config/sops/age/keys.txt"), -- no need to specify `private_key` now
   })
  end
@@ -57,7 +69,7 @@ Install Age using your favorite plugin manager. For example, with [lazy.nvim](ht
 Everything needed for encryption and decryption is handled within the plugin itself.
 
 
-### config via env variable
+### config 
 
 ```lua
 -- ~/.config/nvim/lua/plugins/age.lua
@@ -71,40 +83,9 @@ Everything needed for encryption and decryption is handled within the plugin its
 
       require('age').setup({
         encrypt_and_del = true, -- will remove the original file after encrypting.
-        public_key = public_key,
-        private_key = private_key,
+        key_file = vim.fn.expand("~/.config/sops/age/keys.txt"),
       })
     end
-}
-```
-
-> [!TIP]
-> check examples dir for non panic version
-
-### config via lua file 
-
-```lua
--- ~/.config/nvim/lua/plugins/age.lua
-
-{
-    'abhinandh-s/age.nvim',
-    cmd = { "Age" },
-    config = function()
-      local key = require('key')
-
-      require('age').setup({
-        encrypt_and_del = true, -- will remove the original file after encrypting.
-        public_key = "ageXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
-        private_key = key.private_key, -- defined in another lua file which is not included in git for safety
-      })
-    end
-}
-```
-```lua
--- ~/.config/nvim/lua/key.lua
-
-return {
-  private_key = "AGE-SECRET-KEY-XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
 }
 ```
 
@@ -113,7 +94,7 @@ return {
 Age provides:
 
 - command - `:Age` 
-- apis - `decrypt_to_string` and `decrypt_to_string_with_identities`
+- apis - `decrypt_to_string`, `decrypt_from_string` and `decrypt_to_string_with_identities`
 
 The `:Age` command with the following syntax:
 
@@ -137,9 +118,8 @@ The `:Age` command with the following syntax:
 - Kills the current buffer and switches to a previous buffer or creates a scratch buffer in case there is no buffer to switch, then encrypts the file with the provided age key.
 
 ```vim
-:Age encrypt " uses public key from config
-:Age encrypt age1ql3z7hjy54pw3hyww5ayyfg7zqgvc7w3j2elw8zmrj2kg5sfn9aqmcac8p " public keys
-:Age encrypt /path/to/recipents.txt " list for public keys
+:Age encrypt " uses key file from config
+:Age encrypt /path/to/keys.txt " list for public keys
 ```
 
 - Decrypts the currently opened encrypted file, and switches to the decrypted file. 
@@ -151,10 +131,11 @@ The `:Age` command with the following syntax:
 
 You can use age api in nvim configs as:
 
-age.nvim provides 2 apis - 
+age.nvim provides 3 apis - 
 
-- `decrypt_to_string` -- this uses private key provided in setup config 
+- `decrypt_to_string` -- this uses key file provided in setup config 
 - `decrypt_to_string_with_identities` -- takes from file
+- `decrypt_from_string` -- takes from key file 
 
 ```lua 
 return {
@@ -167,11 +148,11 @@ return {
       local age = require("age")
 
       ---------
-      -- api 01 
+      -- api 01
       ---------
       age.setup({
-          private_key = "private_key",
-        })
+        key_file = vim.fn.expand("~/.config/sops/age/keys.txt"),
+      })
 
       -- Load the secret
       local secret = age.decrypt_to_string(vim.fn.expand("~/.config/nvim/top_secret.txt.age"))
@@ -179,7 +160,7 @@ return {
       print(secret)
 
       ---------
-      -- api 02 
+      -- api 02
       ---------
       local secret_02 = age.decrypt_to_string_with_identities(
         vim.fn.expand("~/.config/nvim/top_secret.txt.age"),
@@ -189,6 +170,15 @@ return {
       )
 
       print(secret_02)
+
+      ---------
+      -- api 03
+      ---------
+      local enc = "-----BEGIN AGE ENCRYPTED FILE-----\nYWdlLWVuY3J5cHRpb24ub3JnL3YxCi0+IFgyNTUxOSA0MTJ6eFpNSkJzWWZQOGhp\nK3MzZi9KMDhYY0M4azJmNkhhWVlzbHRKRlI0CnF1a2E4UHdKM3NtWHZmRXpKZ1l2\nRTBnUDdwR3JFK0M0YTR5UFA4bENXUnMKLT4gQ3YhLEtELHgtZ3JlYXNlICtAe0Bl\nCk1KQVZBY3Q0NWhPZHFyQQotLS0gaC9IajVmaVB2Mm9BcHQ4RlFtb2dDV3BXSm1G\nUVlUTnp3bG11VmMxQ2xCbwpnuz8DboqAagJFzdzzH1Rw+CmXqA/bdcXf3vKE3mz8\nNjRbL4GsObbj8IomB27BmA5vew==\n-----END AGE ENCRYPTED FILE-----"
+
+      local secret_03 = age.decrypt_from_string(enc)
+
+      print(secret_03)
     end,
   },
 }

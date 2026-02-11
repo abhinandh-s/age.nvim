@@ -121,5 +121,31 @@ fn age() -> Result<Dictionary, nvim_oxi::Error> {
         })),
     );
 
+    // -- some_file.lua
+    //
+    // local age = require("age")
+    //
+    // -- Load the secret
+    // local secret = age.decrypt_to_string_with_identities(
+    //   vim.fn.expand("~/.config/nvim/top_secret.txt.age"),
+    //  {
+    //    vim.fn.expand("~/.local/share/age/key.txt"),
+    //  }
+    // )
+    //
+    //   print(secret)
+    //
+    let age_api_03 = Rc::clone(&app);
+    exports.insert(
+        "decrypt_from_string",
+        Object::from(
+            Function::<String, Result<String, nvim_oxi::Error>>::from_fn(move |ctx| {
+                age_api_03.borrow().decrypt_from_string(ctx).map_err(|err| {
+                    nvim_oxi::Error::Api(nvim_oxi::api::Error::Other(err.to_string()))
+                })
+            }),
+        ),
+    );
+
     Ok(exports)
 }
