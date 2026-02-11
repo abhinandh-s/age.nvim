@@ -255,7 +255,7 @@ mod test {
     #[ignore = "Only works on my machine"]
     fn path_fix() {
         let shortcut = "~/git/test_01/test/some/file.txt";
-        let rooted = "/home/abhi/git/test_01/test/some/file.txt"; // [x]
+        let rooted = "/home/abhi/git/test_01/test/some/file.txt";
         let deep_reletive = "./test/some/file.txt";
         let deep_reletive_02 = "../test_01/test/some/file.txt";
         let reletive = "test/some/file.txt";
@@ -266,6 +266,7 @@ mod test {
     }
 
     #[test]
+    #[ignore = "Only works on my machine"]
     fn identities_file() -> Result<(), crate::error::Error> {
         let key_files = vec!["~/.config/sops/age/keys.txt".to_owned()];
 

@@ -16,7 +16,7 @@
 - [Usage](#usage)  
 - [What is age?](#what-is-age)  
 
-## Breaking Changes from v.2.2.0
+## Breaking Changes from v.2.2.0 [2026-02-11]
 
 Due to security conserns the fields `private_key` and `public_key` in config has been removed. Instead user can specify `key_file`.
 

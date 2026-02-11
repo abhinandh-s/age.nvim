@@ -29,32 +29,29 @@ impl Command {
 pub fn completion() -> Function<(String, String, usize), Vec<String>> {
     Function::from_fn({
         move |args: (String, String, usize)| {
-            let (arg_lead, cmd_line, cursor_pos) = args;
+            let (arg_lead, cmd_line, _) = args;
 
-            let split_cmd_line: Vec<&str> = cmd_line.split_whitespace().collect();
-            let args_after_command = &split_cmd_line[1..];
+            //  ["Age", "encrypt", ""]
+            //  arguments[0] = "Age"
+            //  arguments[1] = "encrypt"
+            //  arguments[2..] = Otional file paths
+            let arguments: Vec<&str> = cmd_line.split_whitespace().collect();
 
-            let mut current_arg_index = 0;
-
-            for (index, &arg) in args_after_command.iter().enumerate() {
-                if let Some(start_pos) = cmd_line.find(arg) {
-                    let end_pos = start_pos + arg.len();
-                    if cursor_pos >= start_pos && cursor_pos <= end_pos {
-                        current_arg_index = index;
-                        break;
-                    }
-                }
-            }
-
-            if current_arg_index > 0 {
-                vec![]
+            let is_first_arg = if cmd_line.ends_with(' ') {
+                arguments.len() < 2
             } else {
+                arguments.len() <= 2
+            };
+
+            if is_first_arg {
                 let completions = vec!["decrypt".into(), "encrypt".into(), "genkey".into()];
-                completions
+
+                return completions
                     .into_iter()
                     .filter(|c: &String| c.starts_with(&arg_lead))
-                    .collect::<Vec<_>>()
+                    .collect::<Vec<_>>();
             }
+            vec![]
         }
     })
 }

@@ -25,7 +25,7 @@ impl Config {
             //     .and_then(|key_files_obj| Vec::from_object(key_files_obj.clone()).ok())
             //     .unwrap_or_default(),
 
-            encrypt_and_del: options
+                encrypt_and_del: options
                 .get("encrypt_and_del")
                 .and_then(|encrypt_and_del| bool::from_object(encrypt_and_del.clone()).ok())
                 .unwrap_or(false),

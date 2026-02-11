@@ -6,7 +6,7 @@ use nvim_oxi::api::opts::BufDeleteOpts;
 use nvim_oxi::{print, Dictionary, Result as OxiResult};
 
 use crate::command::Command;
-use crate::crypt::decrypt_into_file;
+use crate::crypt::{decrypt_into_file, decrypt_to_string};
 use crate::error::Error;
 use crate::{config::Config, crypt::encrypt_into_file};
 
@@ -184,7 +184,7 @@ impl App {
         // Logic: If private_key_file is set, use that. Otherwise use the string.
         if !self.config.key_file.is_empty() {
             let id_file = self.config.key_file.to_string();
-            return crate::crypt::decrypt_to_string(path, vec![id_file]);
+            return decrypt_to_string(path, vec![id_file]);
         }
 
         Err(Error::Other(
@@ -212,27 +212,7 @@ impl App {
         let path = path::Path::new(&file_path);
         validate_path(path)?;
 
-        // let mut identities = Vec::new();
-        //
-        // for id_path in key_files {
-        //     let p = path::Path::new(&id_path);
-        //     if !p.exists() {
-        //         return Err(Error::Custom(format!("Identity file not found: {id_path}")));
-        //     }
-        //
-        //     // Use age::IdentityFile to parse the file (supports age & SSH formats)
-        //     let identity_file =
-        //         age::IdentityFile::from_file(p.to_string_lossy().to_string())?.into_identities()?;
-        //
-        //     // IdentityFile implements into_identities()
-        //     identities.extend(identity_file);
-        // }
-        //
-        // if identities.is_empty() {
-        //     return Err(Error::Custom("No valid identities provided".to_owned()));
-        // }
-
-        crate::crypt::decrypt_to_string(path, key_files)
+        decrypt_to_string(path, key_files)
     }
 }
 
