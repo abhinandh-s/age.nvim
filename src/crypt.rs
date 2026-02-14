@@ -44,7 +44,7 @@ pub fn encrypt_from_files(
     let mut plaintext = Vec::new();
     file.read_to_end(&mut plaintext)?;
 
-    let recipients = get_recipients(key_files)?;
+    let recipients = load_recipients(key_files)?;
 
     encrypt(
         recipients.iter().map(|r| r.as_ref() as &dyn age::Recipient),
@@ -53,16 +53,16 @@ pub fn encrypt_from_files(
 }
 
 // Wrapper around encrypt
-fn encrypted_to_string(path: &Path, key_files: Vec<String>) -> Result<String, crate::error::Error> {
+fn encrypt_path_to_string(path: &Path, key_files: Vec<String>) -> Result<String, crate::error::Error> {
     Ok(String::from_utf8(encrypt_from_files(path, key_files)?)?)
 }
 
 // Wrapper around encrypt
-fn encrypted_from_string(
+fn encrypted_string_to_string(
     plaintext: String,
     key_files: Vec<String>,
 ) -> Result<String, crate::error::Error> {
-    let binding = get_recipients(key_files)?;
+    let binding = load_recipients(key_files)?;
     let keys = binding.iter().map(|f| f.as_ref() as &dyn age::Recipient);
 
     let decrypted = encrypt(keys, plaintext.as_bytes())?;
@@ -70,7 +70,7 @@ fn encrypted_from_string(
     Ok(String::from_utf8(decrypted)?)
 }
 
-fn get_recipients(
+fn load_recipients(
     key_files: Vec<String>,
 ) -> Result<Vec<Box<dyn age::Recipient + Send + 'static>>, crate::error::Error> {
     let mut output: Vec<Box<dyn age::Recipient + Send + 'static>> = Vec::new();
@@ -86,7 +86,7 @@ pub fn encrypt_into_file(
     out_path: &Path,
     key_files: Vec<String>,
 ) -> Result<(), crate::error::Error> {
-    let encrypted = encrypted_to_string(plaintext, key_files)?;
+    let encrypted = encrypt_path_to_string(plaintext, key_files)?;
 
     // Write encrypted content to the output file
     let mut output_file = OpenOptions::new()
@@ -122,7 +122,7 @@ fn decrypt<'a, R: std::io::Read>(
 
 fn decrypt_from_files(path: &Path, filenames: Vec<String>) -> Result<Vec<u8>, crate::error::Error> {
     let file = std::fs::File::open(path)?;
-    let binding = get_identities(filenames)?;
+    let binding = load_identities(filenames)?;
     let keys = binding.iter().map(|f| f.as_ref() as &dyn age::Identity);
 
     decrypt(keys, file)
@@ -141,7 +141,7 @@ pub fn decrypt_from_string(
     encrypted: String,
     key_files: Vec<String>,
 ) -> Result<String, crate::error::Error> {
-    let binding = get_identities(key_files)?;
+    let binding = load_identities(key_files)?;
     let keys = binding.iter().map(|f| f.as_ref() as &dyn age::Identity);
 
     let decrypted = decrypt(keys, std::io::Cursor::new(encrypted.as_bytes()))?;
@@ -168,7 +168,7 @@ pub fn decrypt_into_file(
 }
 
 /// Must be list of files
-pub fn get_identities(
+pub fn load_identities(
     filenames: Vec<String>,
 ) -> Result<Vec<Box<dyn age::Identity>>, Box<dyn std::error::Error>> {
     let mut output = Vec::new();
@@ -210,7 +210,7 @@ mod test {
 
     use crate::crypt::{
         decrypt_from_string, decrypt_into_file, decrypt_to_string, encrypt_into_file,
-        encrypted_from_string, encrypted_to_string, get_full_path,
+        encrypted_string_to_string, encrypt_path_to_string, get_full_path,
     };
 
     #[test]
@@ -237,14 +237,14 @@ mod test {
         let encrypted = std::path::Path::new("tests/some/dir/file.txt.age");
         let original = std::fs::read_to_string(input)?;
 
-        let e = encrypted_to_string(input, key_files.clone())?;
+        let e = encrypt_path_to_string(input, key_files.clone())?;
         let df = decrypt_from_string(e, key_files.clone())?;
         assert_eq!(original, df);
 
         let d = decrypt_to_string(encrypted, key_files.clone())?;
         assert_eq!(original, d);
 
-        let enc = encrypted_from_string("Some secret text.\n".to_owned(), key_files.clone())?;
+        let enc = encrypted_string_to_string("Some secret text.\n".to_owned(), key_files.clone())?;
         let ed = decrypt_from_string(enc, key_files.clone())?;
         assert_eq!(original, ed);
 
@@ -270,7 +270,7 @@ mod test {
     fn identities_file() -> Result<(), crate::error::Error> {
         let key_files = vec!["~/.config/sops/age/keys.txt".to_owned()];
 
-        let enc = encrypted_from_string("plaintext".to_owned(), key_files.clone())?;
+        let enc = encrypted_string_to_string("plaintext".to_owned(), key_files.clone())?;
 
         let dec = decrypt_from_string(enc, key_files.clone())?;
 

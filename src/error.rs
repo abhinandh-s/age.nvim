@@ -44,29 +44,13 @@ impl From<Error> for OxiError {
     }
 }
 
-impl std::error::Error for Error {}
-
-impl From<nvim_oxi::Error> for Error {
-    fn from(err: nvim_oxi::Error) -> Self {
-        Error::Nvim(err)
-    }
-}
-
-impl From<nvim_oxi::api::Error> for Error {
-    fn from(err: nvim_oxi::api::Error) -> Self {
-        Error::Api(err)
-    }
-}
-
-impl From<std::io::Error> for Error {
-    fn from(err: std::io::Error) -> Self {
-        Error::Io(err)
-    }
-}
-
 impl From<&str> for Error {
     fn from(msg: &str) -> Self {
-        Error::Other(msg.to_owned())
+        Error::Other(if msg.to_lowercase().starts_with("error") {
+            msg.to_owned()
+        } else {
+            format!("Error: {}", msg)
+        })
     }
 }
 
@@ -76,32 +60,33 @@ impl From<Box<dyn std::error::Error>> for Error {
     }
 }
 
-impl From<age::DecryptError> for Error {
-    fn from(value: age::DecryptError) -> Self {
-        Error::Other(value.to_string())
+macro_rules! impl_err {
+    ($($from:path),* $(,)?) => {
+        impl std::error::Error for Error {}
+        $(
+            impl From<$from> for Error {
+                fn from(err: $from) -> Self {
+                    let string = err.to_string();
+                    Error::Other(
+                        if string.to_lowercase().starts_with("error") {
+                            string
+                        } else {
+                            format!("Error: {}", string)
+                        }
+                    )
+                }
+            }
+        )*
     }
 }
 
-impl From<age::EncryptError> for Error {
-    fn from(value: age::EncryptError) -> Self {
-        Error::Other(value.to_string())
-    }
-}
-
-impl From<std::str::Utf8Error> for Error {
-    fn from(value: std::str::Utf8Error) -> Self {
-        Error::Other(value.to_string())
-    }
-}
-
-impl From<std::string::FromUtf8Error> for Error {
-    fn from(value: std::string::FromUtf8Error) -> Self {
-        Error::Other(value.to_string())
-    }
-}
-
-impl From<std::env::VarError> for Error {
-    fn from(value: std::env::VarError) -> Self {
-        Error::Other(value.to_string())
-    }
-}
+impl_err![
+    nvim_oxi::Error,
+    std::io::Error,
+    nvim_oxi::api::Error,
+    std::env::VarError,
+    std::str::Utf8Error,
+    std::string::FromUtf8Error,
+    age::EncryptError,
+    age::DecryptError,
+];
