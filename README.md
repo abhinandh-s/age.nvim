@@ -78,9 +78,6 @@ Everything needed for encryption and decryption is handled within the plugin its
     'abhinandh-s/age.nvim',
     cmd = { "Age" },
     config = function()
-    local public_key = os.getenv("AGE_PUBLIC_KEY")
-    local private_key = os.getenv("AGE_PRIVATE_KEY")
-
       require('age').setup({
         encrypt_and_del = true, -- will remove the original file after encrypting.
         key_file = vim.fn.expand("~/.config/sops/age/keys.txt"),
