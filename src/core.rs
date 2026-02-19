@@ -187,7 +187,7 @@ impl App {
             return decrypt_to_string(path, vec![id_file]);
         }
 
-        Err(Error::Other(
+        Err(Error::Age(
             "the field `key_file` in config is missing".to_owned(),
         ))
     }
@@ -199,7 +199,7 @@ impl App {
             return crate::crypt::decrypt_from_string(encrypted, vec![id_file]);
         }
 
-        Err(Error::Other(
+        Err(Error::Age(
             "the field `key_file` in config is missing".to_owned(),
         ))
     }
@@ -218,7 +218,7 @@ impl App {
 
 fn validate_path(path: &path::Path) -> Result<(), nvim_oxi::Error> {
     if !path.exists() {
-        return Err(Error::Custom(format!("File not found: {}", path.to_string_lossy())).into());
+        return Err(Error::Age(format!("File not found: {}", path.to_string_lossy())).into());
     }
 
     Ok(())

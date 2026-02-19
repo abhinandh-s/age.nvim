@@ -23,6 +23,7 @@ fn age() -> Result<Dictionary, nvim_oxi::Error> {
     let config = Config::default();
     let app = Rc::new(RefCell::new(App::new(config)));
 
+    // -- `:Age` command
     let age_cmd = {
         let app_handle_cmd = Rc::clone(&app);
 
@@ -54,7 +55,18 @@ fn age() -> Result<Dictionary, nvim_oxi::Error> {
 
     create_user_command("Age", age_cmd, &opts)?;
 
-    // -- exports
+    // -- setup function for config
+    //
+    // ```lua
+    //
+    //  config = function()
+    //    require('age').setup({
+    //      key_file = vim.fn.expand("~/.config/sops/age/keys.txt"),
+    //      encrypt_and_del = true,
+    //    })
+    //  end
+    //
+    // ```
     let app_setup = Rc::clone(&app);
     let mut exports: Dictionary = Dictionary::from_iter::<
         [(&str, Function<Dictionary, Result<(), nvim_oxi::Error>>); 1],
@@ -65,16 +77,25 @@ fn age() -> Result<Dictionary, nvim_oxi::Error> {
         }),
     )]);
 
-    // -- lib
-
-    // -- some_file.lua
+    // # Api 01
+    //
+    // ```lua
     //
     // local age = require("age")
     //
-    // -- Load the secret
-    // local secret = age.decrypt_to_string(vim.fn.expand("~/.config/nvim/top_secret.txt.age"))
+    // ---------
+    // -- api 01
+    // ---------
     //
+    // -- assuming `age.setup()` is configured with `key_file`
+    //
+    // -- Load the secret
+    // local path = vim.fn.expand("~/.config/nvim/top_secret.txt.age")
+    //
+    // local secret = age.decrypt_to_string(path):gsub("%s+", "")
     // print(secret)
+    //
+    // ```
     //
     let age_api_01 = Rc::clone(&app);
     exports.insert(
@@ -93,19 +114,28 @@ fn age() -> Result<Dictionary, nvim_oxi::Error> {
         ),
     );
 
-    // -- some_file.lua
+    // # Api 02
+    //
+    // ```lua
     //
     // local age = require("age")
     //
-    // -- Load the secret
-    // local secret = age.decrypt_to_string_with_identities(
+    // ---------
+    // -- api 02
+    // ---------
+    //
+    // -- does not require `age.setup()`
+    //
+    // local secret_02 = age.decrypt_to_string_with_identities(
     //   vim.fn.expand("~/.config/nvim/top_secret.txt.age"),
-    //  {
-    //    vim.fn.expand("~/.local/share/age/key.txt"),
-    //  }
+    //   {
+    //     vim.fn.expand("~/.local/share/age/key.txt"),
+    //   }
     // )
     //
-    //   print(secret)
+    // print(secret_02)
+    //
+    // ```
     //
     let age_api_02 = Rc::clone(&app);
     exports.insert(
@@ -121,19 +151,24 @@ fn age() -> Result<Dictionary, nvim_oxi::Error> {
         })),
     );
 
-    // -- some_file.lua
+    // # Api 03
+    //
+    // ```lua
     //
     // local age = require("age")
     //
-    // -- Load the secret
-    // local secret = age.decrypt_to_string_with_identities(
-    //   vim.fn.expand("~/.config/nvim/top_secret.txt.age"),
-    //  {
-    //    vim.fn.expand("~/.local/share/age/key.txt"),
-    //  }
-    // )
+    // ---------
+    // -- api 03
+    // ---------
+    // local enc = "-----BEGIN AGE ENCRYPTED FILE-----\nYsdfuhsdulfgdfkoryephvcguew==\n-----END AGE ENCRYPTED FILE-----"
     //
-    //   print(secret)
+    // -- assuming `age.setup()` is configured with `key_file`
+    //
+    // local secret_03 = age.decrypt_from_string(enc)
+    //
+    // print(secret_03)
+    //
+    // ```
     //
     let age_api_03 = Rc::clone(&app);
     exports.insert(

@@ -51,6 +51,7 @@ pub fn completion() -> Function<(String, String, usize), Vec<String>> {
                     .filter(|c: &String| c.starts_with(&arg_lead))
                     .collect::<Vec<_>>();
             }
+            // should we provide file paths ???
             vec![]
         }
     })

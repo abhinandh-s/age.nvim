@@ -187,7 +187,7 @@ fn get_full_path(input: &str) -> Result<std::path::PathBuf, crate::error::Error>
     if input.starts_with("~/") {
         let home = std::env::var("HOME")?;
         path_buf.push(home);
-        path_buf.push(input.strip_prefix("~/").ok_or(crate::error::Error::Other(
+        path_buf.push(input.strip_prefix("~/").ok_or(crate::error::Error::Age(
             "Can't strip ~/from path".to_owned(),
         ))?);
     } else {
@@ -202,7 +202,7 @@ fn get_full_path(input: &str) -> Result<std::path::PathBuf, crate::error::Error>
     if absolute_path.is_file() {
         return Ok(absolute_path);
     }
-    Err(crate::error::Error::Other("Can't parse path".to_owned()))
+    Err(crate::error::Error::Age("Can't parse path".to_owned()))
 }
 
 #[cfg(test)]

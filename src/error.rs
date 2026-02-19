@@ -2,21 +2,13 @@ use nvim_oxi::{api::Error as OxiApiError, Error as OxiError};
 
 #[derive(Debug)]
 pub enum Error {
-    Nvim(nvim_oxi::Error),
-    Api(nvim_oxi::api::Error),
-    Io(std::io::Error),
-    Other(String),
-    Custom(String),
+    Age(String),
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Nvim(err) => write!(f, "{err}"),
-            Error::Api(err) => write!(f, "API Error: {err}"),
-            Error::Io(err) => write!(f, "IO Error: {err}"),
-            Error::Other(err) => write!(f, "Error: {err}"),
-            Error::Custom(err) => write!(f, "Error: {err}"),
+            Error::Age(err) => write!(f, "{err}"),
         }
     }
 }
@@ -46,7 +38,7 @@ impl From<Error> for OxiError {
 
 impl From<&str> for Error {
     fn from(msg: &str) -> Self {
-        Error::Other(if msg.to_lowercase().starts_with("error") {
+        Error::Age(if msg.to_lowercase().starts_with("error") {
             msg.to_owned()
         } else {
             format!("Error: {}", msg)
@@ -56,7 +48,7 @@ impl From<&str> for Error {
 
 impl From<Box<dyn std::error::Error>> for Error {
     fn from(err: Box<dyn std::error::Error>) -> Self {
-        Error::Other(err.to_string())
+        Error::Age(err.to_string())
     }
 }
 
@@ -67,7 +59,7 @@ macro_rules! impl_err {
             impl From<$from> for Error {
                 fn from(err: $from) -> Self {
                     let string = err.to_string();
-                    Error::Other(
+                    Error::Age(
                         if string.to_lowercase().starts_with("error") {
                             string
                         } else {
@@ -90,3 +82,4 @@ impl_err![
     age::EncryptError,
     age::DecryptError,
 ];
+
