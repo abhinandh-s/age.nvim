@@ -7,7 +7,8 @@ use nvim_oxi::{print, Dictionary, Result as OxiResult};
 
 use crate::command::Command;
 use crate::crypt::{decrypt_into_file, decrypt_to_string};
-use crate::error::Error;
+use crate::error::AgeError;
+// use crate::error::Error;
 use crate::{config::Config, crypt::encrypt_into_file};
 
 #[derive(Debug)]
@@ -41,7 +42,7 @@ impl App {
         &mut self,
         cmd: Command,
         raw_args: Vec<String>,
-    ) -> Result<(), crate::error::Error> {
+    ) -> Result<(), crate::error::AgeError> {
         let filenames = if raw_args.is_empty() {
             vec![self.config.key_file.to_string()]
         } else {
@@ -77,7 +78,7 @@ impl App {
         }
     }
 
-    fn gen_new_key(&self) -> Result<(), Error> {
+    fn gen_new_key(&self) -> Result<(), AgeError> {
         let key = age::x25519::Identity::generate();
         let time = chrono::Local::now();
         let formatted_time = time.to_rfc3339_opts(chrono::SecondsFormat::Secs, true);
@@ -93,7 +94,7 @@ impl App {
         Ok(())
     }
 
-    fn decrypt_current_file(&self, filenames: Vec<String>) -> Result<(), Error> {
+    fn decrypt_current_file(&self, filenames: Vec<String>) -> Result<(), AgeError> {
         let current_file_bufnr = nvim_oxi::api::get_current_buf();
         let current_file_path = current_file_bufnr.get_name()?;
         let current_file = current_file_path.to_string_lossy();
@@ -131,7 +132,7 @@ impl App {
         Ok(())
     }
 
-    fn encrypt_current_file(&self, filenames: Vec<String>) -> Result<(), Error> {
+    fn encrypt_current_file(&self, filenames: Vec<String>) -> Result<(), AgeError> {
         let current_file_path = nvim_oxi::api::get_current_buf().get_name()?;
         let cfile = current_file_path.to_string_lossy();
         let list_buf = nvim_oxi::api::list_bufs();
@@ -177,7 +178,7 @@ impl App {
         Ok(())
     }
 
-    pub fn decrypt_to_string(&self, file_path: String) -> Result<String, Error> {
+    pub fn decrypt_to_string(&self, file_path: String) -> Result<String, AgeError> {
         let path = path::Path::new(&file_path);
         validate_path(path)?;
 
@@ -187,19 +188,19 @@ impl App {
             return decrypt_to_string(path, vec![id_file]);
         }
 
-        Err(Error::Age(
+        Err(AgeError::new(
             "the field `key_file` in config is missing".to_owned(),
         ))
     }
 
-    pub fn decrypt_from_string(&self, encrypted: String) -> Result<String, Error> {
+    pub fn decrypt_from_string(&self, encrypted: String) -> Result<String, AgeError> {
         // Logic: If private_key_file is set, use that. Otherwise use the string.
         if !self.config.key_file.is_empty() {
             let id_file = self.config.key_file.to_string();
             return crate::crypt::decrypt_from_string(encrypted, vec![id_file]);
         }
 
-        Err(Error::Age(
+        Err(AgeError::new(
             "the field `key_file` in config is missing".to_owned(),
         ))
     }
@@ -208,7 +209,7 @@ impl App {
         &self,
         file_path: String,
         key_files: Vec<String>,
-    ) -> Result<String, Error> {
+    ) -> Result<String, AgeError> {
         let path = path::Path::new(&file_path);
         validate_path(path)?;
 
@@ -216,9 +217,12 @@ impl App {
     }
 }
 
-fn validate_path(path: &path::Path) -> Result<(), nvim_oxi::Error> {
+fn validate_path(path: &path::Path) -> Result<(), AgeError> {
     if !path.exists() {
-        return Err(Error::Age(format!("File not found: {}", path.to_string_lossy())).into());
+        return Err(AgeError::new(format!(
+            "File not found: {}",
+            path.to_string_lossy()
+        )));
     }
 
     Ok(())
