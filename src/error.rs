@@ -1,44 +1,21 @@
-use nvim_oxi::{api::Error as OxiApiError, Error as OxiError};
-
 #[derive(Debug)]
-pub enum Error {
-    Age(String),
+pub struct AgeError(String);
+
+impl AgeError {
+    pub fn new(err: String) -> Self {
+        Self(err)
+    }
 }
 
-impl std::fmt::Display for Error {
+impl std::fmt::Display for AgeError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Error::Age(err) => write!(f, "{err}"),
-        }
+        write!(f, "{}", self.0)
     }
 }
 
-// Implement `From<AgeError>` for `nvim_oxi::Error`.
-impl From<Error> for OxiError {
-    /// Converts a `AgeError` into a `nvim_oxi::Error`.
-    ///
-    /// This allows the `AgeError` to be returned where an `OxiError` is expected, ensuring compatibility
-    /// with the Neovim API. It wraps the `AgeError` as an `OxiApiError::Other` variant.
-    ///
-    /// # Example
-    ///
-    /// ```rust
-    /// use crate::error::AgeError;
-    /// use nvim_oxi::Error as OxiError;
-    ///
-    /// fn example() -> Result<(), OxiError> {
-    ///     let error: AgeError = AgeError::Custom("Something went wrong".to_string());
-    ///     Err(OxiError::from(error))
-    /// }
-    /// ```
-    fn from(err: Error) -> Self {
-        OxiError::Api(OxiApiError::Other(format!("{err}")))
-    }
-}
-
-impl From<&str> for Error {
+impl From<&str> for AgeError {
     fn from(msg: &str) -> Self {
-        Error::Age(if msg.to_lowercase().starts_with("error") {
+        AgeError(if msg.to_lowercase().starts_with("error") {
             msg.to_owned()
         } else {
             format!("Error: {}", msg)
@@ -46,20 +23,20 @@ impl From<&str> for Error {
     }
 }
 
-impl From<Box<dyn std::error::Error>> for Error {
+impl From<Box<dyn std::error::Error>> for AgeError {
     fn from(err: Box<dyn std::error::Error>) -> Self {
-        Error::Age(err.to_string())
+        AgeError(err.to_string())
     }
 }
 
-macro_rules! impl_err {
+macro_rules! impl_age_err {
     ($($from:path),* $(,)?) => {
-        impl std::error::Error for Error {}
+        impl std::error::Error for AgeError {}
         $(
-            impl From<$from> for Error {
+            impl From<$from> for AgeError {
                 fn from(err: $from) -> Self {
                     let string = err.to_string();
-                    Error::Age(
+                    AgeError(
                         if string.to_lowercase().starts_with("error") {
                             string
                         } else {
@@ -72,7 +49,7 @@ macro_rules! impl_err {
     }
 }
 
-impl_err![
+impl_age_err![
     nvim_oxi::Error,
     std::io::Error,
     nvim_oxi::api::Error,
@@ -82,4 +59,3 @@ impl_err![
     age::EncryptError,
     age::DecryptError,
 ];
-

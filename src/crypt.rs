@@ -12,6 +12,8 @@ use std::fs::OpenOptions;
 use std::io::{Read, Write};
 use std::path::Path;
 
+use crate::error::AgeError;
+
 // decrypt the obtained ciphertext to the plaintext.
 //
 // ```
@@ -22,7 +24,7 @@ use std::path::Path;
 fn encrypt<'a>(
     recipients: impl Iterator<Item = &'a dyn age::Recipient>,
     plaintext: &[u8],
-) -> Result<Vec<u8>, crate::error::Error> {
+) -> Result<Vec<u8>, AgeError> {
     let encryptor = age::Encryptor::with_recipients(recipients)?;
 
     let mut encrypted: Vec<u8> = vec![];
@@ -36,10 +38,7 @@ fn encrypt<'a>(
     Ok(encrypted)
 }
 
-pub fn encrypt_from_files(
-    path: &Path,
-    key_files: Vec<String>,
-) -> Result<Vec<u8>, crate::error::Error> {
+pub fn encrypt_from_files(path: &Path, key_files: Vec<String>) -> Result<Vec<u8>, AgeError> {
     let mut file = std::fs::File::open(path)?;
     let mut plaintext = Vec::new();
     file.read_to_end(&mut plaintext)?;
@@ -53,7 +52,7 @@ pub fn encrypt_from_files(
 }
 
 // Wrapper around encrypt
-fn encrypt_path_to_string(path: &Path, key_files: Vec<String>) -> Result<String, crate::error::Error> {
+fn encrypt_path_to_string(path: &Path, key_files: Vec<String>) -> Result<String, AgeError> {
     Ok(String::from_utf8(encrypt_from_files(path, key_files)?)?)
 }
 
@@ -61,7 +60,7 @@ fn encrypt_path_to_string(path: &Path, key_files: Vec<String>) -> Result<String,
 fn encrypted_string_to_string(
     plaintext: String,
     key_files: Vec<String>,
-) -> Result<String, crate::error::Error> {
+) -> Result<String, AgeError> {
     let binding = load_recipients(key_files)?;
     let keys = binding.iter().map(|f| f.as_ref() as &dyn age::Recipient);
 
@@ -72,7 +71,7 @@ fn encrypted_string_to_string(
 
 fn load_recipients(
     key_files: Vec<String>,
-) -> Result<Vec<Box<dyn age::Recipient + Send + 'static>>, crate::error::Error> {
+) -> Result<Vec<Box<dyn age::Recipient + Send + 'static>>, AgeError> {
     let mut output: Vec<Box<dyn age::Recipient + Send + 'static>> = Vec::new();
     for path in key_files {
         let full_path = get_full_path(&path)?.to_string_lossy().to_string();
@@ -85,7 +84,7 @@ pub fn encrypt_into_file(
     plaintext: &Path,
     out_path: &Path,
     key_files: Vec<String>,
-) -> Result<(), crate::error::Error> {
+) -> Result<(), AgeError> {
     let encrypted = encrypt_path_to_string(plaintext, key_files)?;
 
     // Write encrypted content to the output file
@@ -109,7 +108,7 @@ pub fn encrypt_into_file(
 fn decrypt<'a, R: std::io::Read>(
     keys: impl Iterator<Item = &'a dyn age::Identity>,
     encrypted: R,
-) -> Result<Vec<u8>, crate::error::Error> {
+) -> Result<Vec<u8>, AgeError> {
     let reader = age::armor::ArmoredReader::new(encrypted);
     let decryptor = age::Decryptor::new(reader)?;
     let mut decrypted_bytes = vec![];
@@ -120,7 +119,7 @@ fn decrypt<'a, R: std::io::Read>(
     Ok(decrypted_bytes)
 }
 
-fn decrypt_from_files(path: &Path, filenames: Vec<String>) -> Result<Vec<u8>, crate::error::Error> {
+fn decrypt_from_files(path: &Path, filenames: Vec<String>) -> Result<Vec<u8>, AgeError> {
     let file = std::fs::File::open(path)?;
     let binding = load_identities(filenames)?;
     let keys = binding.iter().map(|f| f.as_ref() as &dyn age::Identity);
@@ -128,19 +127,13 @@ fn decrypt_from_files(path: &Path, filenames: Vec<String>) -> Result<Vec<u8>, cr
     decrypt(keys, file)
 }
 /// take keyfile from config
-pub fn decrypt_to_string(
-    input_path: &Path,
-    key_files: Vec<String>,
-) -> Result<String, crate::error::Error> {
+pub fn decrypt_to_string(input_path: &Path, key_files: Vec<String>) -> Result<String, AgeError> {
     let decrypted = decrypt_from_files(input_path, key_files)?;
 
     Ok(String::from_utf8(decrypted)?)
 }
 /// take keyfile from config
-pub fn decrypt_from_string(
-    encrypted: String,
-    key_files: Vec<String>,
-) -> Result<String, crate::error::Error> {
+pub fn decrypt_from_string(encrypted: String, key_files: Vec<String>) -> Result<String, AgeError> {
     let binding = load_identities(key_files)?;
     let keys = binding.iter().map(|f| f.as_ref() as &dyn age::Identity);
 
@@ -180,16 +173,18 @@ pub fn load_identities(
 }
 
 /// converts users input: ~/some/file.txt => /home/user/some/file.txt
-fn get_full_path(input: &str) -> Result<std::path::PathBuf, crate::error::Error> {
+fn get_full_path(input: &str) -> Result<std::path::PathBuf, AgeError> {
     let mut path_buf = std::path::PathBuf::new();
 
     // 1. expand Tilde
     if input.starts_with("~/") {
         let home = std::env::var("HOME")?;
         path_buf.push(home);
-        path_buf.push(input.strip_prefix("~/").ok_or(crate::error::Error::Age(
-            "Can't strip ~/from path".to_owned(),
-        ))?);
+        path_buf.push(
+            input
+                .strip_prefix("~/")
+                .ok_or(AgeError::new("Can't strip ~/from path".to_owned()))?,
+        );
     } else {
         path_buf.push(input);
     }
@@ -202,7 +197,7 @@ fn get_full_path(input: &str) -> Result<std::path::PathBuf, crate::error::Error>
     if absolute_path.is_file() {
         return Ok(absolute_path);
     }
-    Err(crate::error::Error::Age("Can't parse path".to_owned()))
+    Err(AgeError::new("Can't parse path".to_owned()))
 }
 
 #[cfg(test)]
@@ -210,11 +205,12 @@ mod test {
 
     use crate::crypt::{
         decrypt_from_string, decrypt_into_file, decrypt_to_string, encrypt_into_file,
-        encrypted_string_to_string, encrypt_path_to_string, get_full_path,
+        encrypt_path_to_string, encrypted_string_to_string, get_full_path,
     };
+    use crate::error::AgeError;
 
     #[test]
-    fn into_file() -> Result<(), crate::error::Error> {
+    fn into_file() -> Result<(), AgeError> {
         let filenames = vec!["tests/test_key.txt".to_owned()];
         let input = std::path::Path::new("tests/some/dir/file.txt");
         let encrypted = std::path::Path::new("tests/some/dir/file.txt.age");
@@ -231,7 +227,7 @@ mod test {
         Ok(())
     }
     #[test]
-    fn to_and_as_string() -> Result<(), crate::error::Error> {
+    fn to_and_as_string() -> Result<(), AgeError> {
         let key_files = vec!["tests/test_key.txt".to_owned()];
         let input = std::path::Path::new("tests/some/dir/file.txt");
         let encrypted = std::path::Path::new("tests/some/dir/file.txt.age");
@@ -267,7 +263,7 @@ mod test {
 
     #[test]
     #[ignore = "Only works on my machine"]
-    fn identities_file() -> Result<(), crate::error::Error> {
+    fn identities_file() -> Result<(), AgeError> {
         let key_files = vec!["~/.config/sops/age/keys.txt".to_owned()];
 
         let enc = encrypted_string_to_string("plaintext".to_owned(), key_files.clone())?;

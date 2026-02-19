@@ -39,7 +39,10 @@ fn age() -> Result<Dictionary, nvim_oxi::Error> {
                 Some(command) => {
                     app_handle_cmd
                         .borrow_mut()
-                        .handle_command(command, raw_args)?;
+                        .handle_command(command, raw_args)
+                        .map_err(|err| {
+                            nvim_oxi::Error::Api(nvim_oxi::api::Error::Other(err.to_string()))
+                        })?;
                 }
                 None => err_writeln(&format!("Unknown command: {action}")),
             };
