@@ -1,26 +1,33 @@
-#![allow(dead_code)]
-// -- NOTE: functions declared here are supose to be independent.
+// This module provide high level wrapper around the `age` crate.
 //
-// x => vec<u8> | low level
-// x_from_files | high level
-// x_to_string => String [pub api] // takes key_files from config
-// x_from_string => String [pub api] // takes key_files from config
-// x_to_string_with_identities => String [pub api] => both body is same | x_to_string is enough here
-// x_into_file => () [pub Cmd]
+// ## General note
 //
+// - Functions declared here are supose to be independent.
+// - Only decryption functions will form part of public api.
+// - While providing `key_file` through cmd args. user is supose
+//   to provide full path like `/home/user/.config/age/keys.txt`
+//   yet we takes some efforts to convert other forms into full path
+//   via `get_full_path` function.
+//
+// ## Encryption
+//
+// - We uses ASCII Armor [`age::armor`] by default for every encryption we do.
+//   while decrypting `age` is smart enough to know its armored. No additions
+//   flag or settings is needed from normal decryption.
+//
+// ## Overview
+//
+// `fn encrypt/decrypt => vec<u8>` are the core functions, others are
+// wrapper around this for simplicity.
+
 use std::fs::OpenOptions;
 use std::io::{Read, Write};
 use std::path::Path;
 
 use crate::error::AgeError;
 
-// decrypt the obtained ciphertext to the plaintext.
-//
-// ```
-// let key = age::x25519::Identity::generate();
-// let pubkey = key.to_public();
-// let recipients: Vec<&dyn age::Recipient> = vec![&pubkey];
-// ```
+/// encrypts the obtained plaintext `&[u8]` into ciphertext `Vec<u8>`.
+/// with many `Recipient` (not key file/files)
 fn encrypt<'a>(
     recipients: impl Iterator<Item = &'a dyn age::Recipient>,
     plaintext: &[u8],
@@ -38,7 +45,9 @@ fn encrypt<'a>(
     Ok(encrypted)
 }
 
-pub fn encrypt_from_files(path: &Path, key_files: Vec<String>) -> Result<Vec<u8>, AgeError> {
+/// encrypts the contents of obtained file `&Path` into ciphertext `Vec<u8>`
+/// Recipient's are taken from `key_files`
+fn encrypt_file(path: &Path, key_files: Vec<String>) -> Result<Vec<u8>, AgeError> {
     let mut file = std::fs::File::open(path)?;
     let mut plaintext = Vec::new();
     file.read_to_end(&mut plaintext)?;
@@ -51,16 +60,18 @@ pub fn encrypt_from_files(path: &Path, key_files: Vec<String>) -> Result<Vec<u8>
     )
 }
 
-// Wrapper around encrypt
+/// encrypts the contents of obtained file `&Path` into ciphertext `String`
+/// Recipient's are taken from `key_files`
+///
+/// same as `encrypt_file` but returns `String`
 fn encrypt_path_to_string(path: &Path, key_files: Vec<String>) -> Result<String, AgeError> {
-    Ok(String::from_utf8(encrypt_from_files(path, key_files)?)?)
+    Ok(String::from_utf8(encrypt_file(path, key_files)?)?)
 }
 
-// Wrapper around encrypt
-fn encrypted_string_to_string(
-    plaintext: String,
-    key_files: Vec<String>,
-) -> Result<String, AgeError> {
+/// encrypts the `String` provided into ciphertext `String`
+/// Recipient's are taken from `key_files`
+#[allow(dead_code)]
+fn encrypt_to_string(plaintext: String, key_files: Vec<String>) -> Result<String, AgeError> {
     let binding = load_recipients(key_files)?;
     let keys = binding.iter().map(|f| f.as_ref() as &dyn age::Recipient);
 
@@ -69,18 +80,9 @@ fn encrypted_string_to_string(
     Ok(String::from_utf8(decrypted)?)
 }
 
-fn load_recipients(
-    key_files: Vec<String>,
-) -> Result<Vec<Box<dyn age::Recipient + Send + 'static>>, AgeError> {
-    let mut output: Vec<Box<dyn age::Recipient + Send + 'static>> = Vec::new();
-    for path in key_files {
-        let full_path = get_full_path(&path)?.to_string_lossy().to_string();
-        output.extend(age::IdentityFile::from_file(full_path)?.to_recipients()?);
-    }
-    Ok(output)
-}
-
-pub fn encrypt_into_file(
+/// encrypts the contents of obtained file `&Path` into the output file pointed
+/// Recipient's are taken from `key_files`
+pub(super) fn encrypt_into_file(
     plaintext: &Path,
     out_path: &Path,
     key_files: Vec<String>,
@@ -98,13 +100,11 @@ pub fn encrypt_into_file(
     Ok(())
 }
 
-// decrypt the obtained ciphertext to the plaintext.
-// this can manage both bytes and armored
+// decrypts the obtained ciphertext [any thing that impl `std::io::Read`]
+// to the plaintext `Vec<u8>`
+/// with many `Recipient` (not key file/files)
 //
-// ```
-// let key = age::x25519::Identity::generate();
-// let keys: Vec<&dyn age::Identity> = vec![&key];
-// ```
+//  this can manage both bytes and armored
 fn decrypt<'a, R: std::io::Read>(
     keys: impl Iterator<Item = &'a dyn age::Identity>,
     encrypted: R,
@@ -119,21 +119,33 @@ fn decrypt<'a, R: std::io::Read>(
     Ok(decrypted_bytes)
 }
 
-fn decrypt_from_files(path: &Path, filenames: Vec<String>) -> Result<Vec<u8>, AgeError> {
+/// decrypts the encrypted content of file provided into plaintext `Vec<u8>`
+/// Identity's are taken from `key_files`
+fn decrypt_files(path: &Path, filenames: Vec<String>) -> Result<Vec<u8>, AgeError> {
     let file = std::fs::File::open(path)?;
     let binding = load_identities(filenames)?;
     let keys = binding.iter().map(|f| f.as_ref() as &dyn age::Identity);
 
     decrypt(keys, file)
 }
-/// take keyfile from config
-pub fn decrypt_to_string(input_path: &Path, key_files: Vec<String>) -> Result<String, AgeError> {
-    let decrypted = decrypt_from_files(input_path, key_files)?;
+
+/// decrypts the encrypted content of file provided into plaintext `String`
+/// Identity's are taken from `key_files`
+pub(super) fn decrypt_to_string(
+    input_path: &Path,
+    key_files: Vec<String>,
+) -> Result<String, AgeError> {
+    let decrypted = decrypt_files(input_path, key_files)?;
 
     Ok(String::from_utf8(decrypted)?)
 }
-/// take keyfile from config
-pub fn decrypt_from_string(encrypted: String, key_files: Vec<String>) -> Result<String, AgeError> {
+
+/// decrypts the `String` provided into plaintext `String`
+/// Identity's are taken from `key_files`
+pub(super) fn decrypt_from_string(
+    encrypted: String,
+    key_files: Vec<String>,
+) -> Result<String, AgeError> {
     let binding = load_identities(key_files)?;
     let keys = binding.iter().map(|f| f.as_ref() as &dyn age::Identity);
 
@@ -141,7 +153,10 @@ pub fn decrypt_from_string(encrypted: String, key_files: Vec<String>) -> Result<
 
     Ok(String::from_utf8(decrypted)?)
 }
-pub fn decrypt_into_file(
+
+/// decrypts the contents of obtained file `&Path` into the output file pointed
+/// Identity's are taken from `key_files`
+pub(super) fn decrypt_into_file(
     input_path: &Path,
     output_path: &Path,
     filenames: Vec<String>,
@@ -160,8 +175,20 @@ pub fn decrypt_into_file(
     Ok(())
 }
 
-/// Must be list of files
-pub fn load_identities(
+/// get all Recipient's from provided `key_files`
+fn load_recipients(
+    key_files: Vec<String>,
+) -> Result<Vec<Box<dyn age::Recipient + Send + 'static>>, AgeError> {
+    let mut output: Vec<Box<dyn age::Recipient + Send + 'static>> = Vec::new();
+    for path in key_files {
+        let full_path = get_full_path(&path)?.to_string_lossy().to_string();
+        output.extend(age::IdentityFile::from_file(full_path)?.to_recipients()?);
+    }
+    Ok(output)
+}
+
+/// get all Identity's from provided `key_files`
+fn load_identities(
     filenames: Vec<String>,
 ) -> Result<Vec<Box<dyn age::Identity>>, Box<dyn std::error::Error>> {
     let mut output = Vec::new();
@@ -172,7 +199,7 @@ pub fn load_identities(
     Ok(output)
 }
 
-/// converts users input: ~/some/file.txt => /home/user/some/file.txt
+/// tries to converts users input: ~/some/file.txt => /home/user/some/file.txt
 fn get_full_path(input: &str) -> Result<std::path::PathBuf, AgeError> {
     let mut path_buf = std::path::PathBuf::new();
 
@@ -205,7 +232,7 @@ mod test {
 
     use crate::crypt::{
         decrypt_from_string, decrypt_into_file, decrypt_to_string, encrypt_into_file,
-        encrypt_path_to_string, encrypted_string_to_string, get_full_path,
+        encrypt_path_to_string, encrypt_to_string, get_full_path,
     };
     use crate::error::AgeError;
 
@@ -240,7 +267,7 @@ mod test {
         let d = decrypt_to_string(encrypted, key_files.clone())?;
         assert_eq!(original, d);
 
-        let enc = encrypted_string_to_string("Some secret text.\n".to_owned(), key_files.clone())?;
+        let enc = encrypt_to_string("Some secret text.\n".to_owned(), key_files.clone())?;
         let ed = decrypt_from_string(enc, key_files.clone())?;
         assert_eq!(original, ed);
 
@@ -266,7 +293,7 @@ mod test {
     fn identities_file() -> Result<(), AgeError> {
         let key_files = vec!["~/.config/sops/age/keys.txt".to_owned()];
 
-        let enc = encrypted_string_to_string("plaintext".to_owned(), key_files.clone())?;
+        let enc = encrypt_to_string("plaintext".to_owned(), key_files.clone())?;
 
         let dec = decrypt_from_string(enc, key_files.clone())?;
 

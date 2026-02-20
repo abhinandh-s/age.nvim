@@ -39,10 +39,7 @@ fn age() -> Result<Dictionary, nvim_oxi::Error> {
                 Some(command) => {
                     app_handle_cmd
                         .borrow_mut()
-                        .handle_command(command, raw_args)
-                        .map_err(|err| {
-                            nvim_oxi::Error::Api(nvim_oxi::api::Error::Other(err.to_string()))
-                        })?;
+                        .handle_command(command, raw_args)?;
                 }
                 None => err_writeln(&format!("Unknown command: {action}")),
             };
@@ -109,9 +106,7 @@ fn age() -> Result<Dictionary, nvim_oxi::Error> {
                     age_api_01
                         .borrow()
                         .decrypt_to_string(file_path)
-                        .map_err(|err| {
-                            nvim_oxi::Error::Api(nvim_oxi::api::Error::Other(err.to_string()))
-                        })
+                        .map_err(|err| err.into()) // AgeError into nvim_oxi::Error
                 },
             ),
         ),
@@ -150,7 +145,7 @@ fn age() -> Result<Dictionary, nvim_oxi::Error> {
             age_api_02
                 .borrow()
                 .decrypt_with_identities(file_path, identity_paths)
-                .map_err(|err| nvim_oxi::Error::Api(nvim_oxi::api::Error::Other(err.to_string())))
+                .map_err(|err| err.into()) // AgeError into nvim_oxi::Error
         })),
     );
 
@@ -178,9 +173,10 @@ fn age() -> Result<Dictionary, nvim_oxi::Error> {
         "decrypt_from_string",
         Object::from(
             Function::<String, Result<String, nvim_oxi::Error>>::from_fn(move |ctx| {
-                age_api_03.borrow().decrypt_from_string(ctx).map_err(|err| {
-                    nvim_oxi::Error::Api(nvim_oxi::api::Error::Other(err.to_string()))
-                })
+                age_api_03
+                    .borrow()
+                    .decrypt_from_string(ctx)
+                    .map_err(|err| err.into()) // AgeError into nvim_oxi::Error
             }),
         ),
     );

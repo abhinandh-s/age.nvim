@@ -13,6 +13,12 @@ impl std::fmt::Display for AgeError {
     }
 }
 
+impl From<AgeError> for nvim_oxi::Error {
+    fn from(value: AgeError) -> Self {
+        nvim_oxi::Error::Api(nvim_oxi::api::Error::Other(value.to_string()))
+    }
+}
+
 impl From<&str> for AgeError {
     fn from(msg: &str) -> Self {
         AgeError(if msg.to_lowercase().starts_with("error") {
@@ -51,8 +57,8 @@ macro_rules! impl_age_err {
 
 impl_age_err![
     nvim_oxi::Error,
-    std::io::Error,
     nvim_oxi::api::Error,
+    std::io::Error,
     std::env::VarError,
     std::str::Utf8Error,
     std::string::FromUtf8Error,
