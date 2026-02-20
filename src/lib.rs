@@ -5,11 +5,8 @@ use nvim_oxi::{
     Dictionary, Function, Object,
 };
 
-use config::Config;
-
 use self::{
-    command::{completion, Command},
-    core::App,
+    command::{Command, completion}, config::Config, core::App
 };
 
 mod command;
