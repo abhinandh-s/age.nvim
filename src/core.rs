@@ -8,7 +8,7 @@ use nvim_oxi::{print, Dictionary, Result as OxiResult};
 use crate::command::Command;
 use crate::crypt::{decrypt_to_file, decrypt_to_string};
 use crate::error::AgeError;
-use crate::types::ExistingAgeFile;
+use crate::types::{ExistingAgeFile, ExistingNonAgeFile};
 use crate::{config::Config, crypt::encrypt_to_file};
 
 #[derive(Debug)]
@@ -124,8 +124,9 @@ impl App {
 
     fn encrypt_current_file(&self, filenames: Vec<String>) -> Result<(), AgeError> {
         let current_file_path = nvim_oxi::api::get_current_buf().get_name()?;
-        let cfile = current_file_path.to_string_lossy();
+        let cfile = ExistingNonAgeFile::try_from(current_file_path)?;
         let list_buf = nvim_oxi::api::list_bufs();
+
         let d = list_buf.len();
         // if len is one will will create a new buf
         if d == 1 {
@@ -134,37 +135,25 @@ impl App {
             nvim_oxi::api::set_current_buf(&new_scratch_buf)?;
         } else {
             for buf in list_buf {
-                if buf.get_name()?.to_string_lossy() != cfile {
+                if buf.get_name()?.to_string_lossy() != cfile.to_string() {
                     nvim_oxi::api::set_current_buf(&buf)?;
                     break;
                 }
             }
         }
-        let binding = cfile.to_string();
-        let extension_result = path::Path::new(&binding).extension();
-        match extension_result {
-            Some(ext) => {
-                let new_extension = ext.to_string_lossy().to_string() + ".age";
-                encrypt_to_file(
-                    path::Path::new(&cfile.to_string()),
-                    &path::Path::new(&cfile.to_string()).with_extension(new_extension),
-                    filenames,
-                )
-                .and_then(|_| {
-                    if self.config.encrypt_and_del {
-                        fs::remove_file(current_file_path)?;
-                    }
-                    Ok(())
-                })?;
-            }
-            None => {
-                encrypt_to_file(
-                    path::Path::new(&cfile.to_string()),
-                    &path::Path::new(&cfile.to_string()).with_extension("age"),
-                    filenames,
-                )?;
-            }
+
+        let new_file = cfile.to_string() + ".age";
+
+        encrypt_to_file(
+            path::Path::new(&cfile.to_string()),
+            path::Path::new(&new_file),
+            filenames,
+        )?;
+
+        if self.config.encrypt_and_del {
+            fs::remove_file(cfile.path())?;
         }
+
         Ok(())
     }
 

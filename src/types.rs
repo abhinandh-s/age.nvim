@@ -63,13 +63,51 @@ impl TryFrom<PathBuf> for ExistingAgeFile<'_> {
 
         if path
             .extension()
-            .map(|e| e.to_string_lossy().contains("age"))
+            .map(|e| e.eq_ignore_ascii_case("age"))
             .is_none()
         {
             return Err("File does not have `.age` extension.");
         }
 
         Ok(Self(Cow::Owned(path)))
+    }
+}
+
+pub(crate) struct ExistingNonAgeFile<'a>(Cow<'a, Path>);
+
+impl<'a> ExistingNonAgeFile<'a> {
+    pub(crate) fn path(&self) -> &Path {
+        &self.0
+    }
+}
+
+impl TryFrom<PathBuf> for ExistingNonAgeFile<'_> {
+    type Error = String;
+
+    fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
+        if !path.exists() {
+            return Err("File does not exists.".to_owned());
+        }
+
+        if path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("age"))
+        {
+            let err = format!(
+                "input: {}\nFile have `.age` extension, it's already encrypted.",
+                path.display()
+            );
+            return Err(err);
+        }
+
+        Ok(Self(Cow::Owned(path)))
+    }
+}
+
+/// Gives `.to_string()` for free
+impl Display for ExistingNonAgeFile<'_> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0.to_string_lossy())
     }
 }
 

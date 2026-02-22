@@ -29,6 +29,12 @@ impl From<&str> for AgeError {
     }
 }
 
+impl From<String> for AgeError {
+    fn from(msg: String) -> Self {
+        AgeError(msg.as_str().into())
+    }
+}
+
 impl From<Box<dyn std::error::Error>> for AgeError {
     fn from(err: Box<dyn std::error::Error>) -> Self {
         AgeError(err.to_string())
