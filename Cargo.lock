@@ -57,11 +57,12 @@ dependencies = [
 
 [[package]]
 name = "age_nvim"
-version = "2.2.0"
+version = "2.2.1"
 dependencies = [
  "age",
  "chrono",
  "nvim-oxi",
+ "walkdir",
 ]
 
 [[package]]

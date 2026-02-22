@@ -64,4 +64,5 @@ impl_age_err![
     std::string::FromUtf8Error,
     age::EncryptError,
     age::DecryptError,
+    walkdir::Error,
 ];

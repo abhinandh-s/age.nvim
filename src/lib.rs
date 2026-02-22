@@ -6,7 +6,9 @@ use nvim_oxi::{
 };
 
 use self::{
-    command::{Command, completion}, config::Config, core::App
+    command::{completion, Command},
+    config::Config,
+    core::App,
 };
 
 mod command;
@@ -14,6 +16,7 @@ mod config;
 mod core;
 mod crypt;
 mod error;
+mod types;
 
 #[nvim_oxi::plugin]
 fn age() -> Result<Dictionary, nvim_oxi::Error> {

@@ -82,7 +82,7 @@ fn encrypt_to_string(plaintext: String, key_files: Vec<String>) -> Result<String
 
 /// encrypts the contents of obtained file `&Path` into the output file pointed
 /// Recipient's are taken from `key_files`
-pub(super) fn encrypt_into_file(
+pub(super) fn encrypt_to_file(
     plaintext: &Path,
     out_path: &Path,
     key_files: Vec<String>,
@@ -156,7 +156,7 @@ pub(super) fn decrypt_from_string(
 
 /// decrypts the contents of obtained file `&Path` into the output file pointed
 /// Identity's are taken from `key_files`
-pub(super) fn decrypt_into_file(
+pub(super) fn decrypt_to_file(
     input_path: &Path,
     output_path: &Path,
     filenames: Vec<String>,
@@ -231,8 +231,8 @@ fn get_full_path(input: &str) -> Result<std::path::PathBuf, AgeError> {
 mod test {
 
     use crate::crypt::{
-        decrypt_from_string, decrypt_into_file, decrypt_to_string, encrypt_into_file,
-        encrypt_path_to_string, encrypt_to_string, get_full_path,
+        decrypt_from_string, decrypt_to_file, decrypt_to_string, encrypt_path_to_string,
+        encrypt_to_file, encrypt_to_string, get_full_path,
     };
     use crate::error::AgeError;
 
@@ -243,8 +243,8 @@ mod test {
         let encrypted = std::path::Path::new("tests/some/dir/file.txt.age");
         let decrypted = std::path::Path::new("tests/some/dir/file_decrypted.txt");
 
-        encrypt_into_file(input, encrypted, filenames.clone())?;
-        decrypt_into_file(encrypted, decrypted, filenames)?;
+        encrypt_to_file(input, encrypted, filenames.clone())?;
+        decrypt_to_file(encrypted, decrypted, filenames)?;
 
         let original = std::fs::read_to_string(input)?;
         let result = std::fs::read_to_string(decrypted)?;

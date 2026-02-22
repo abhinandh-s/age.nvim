@@ -79,7 +79,8 @@ Everything needed for encryption and decryption is handled within the plugin its
     cmd = { "Age" },
     config = function()
       require('age').setup({
-        encrypt_and_del = true, -- will remove the original file after encrypting.
+        -- will remove the original file after encrypting.
+        encrypt_and_del = true, -- default = false
         key_file = vim.fn.expand("~/.config/sops/age/keys.txt"),
       })
     end

@@ -6,10 +6,10 @@ use nvim_oxi::api::opts::BufDeleteOpts;
 use nvim_oxi::{print, Dictionary, Result as OxiResult};
 
 use crate::command::Command;
-use crate::crypt::{decrypt_into_file, decrypt_to_string};
+use crate::crypt::{decrypt_to_file, decrypt_to_string};
 use crate::error::AgeError;
-// use crate::error::Error;
-use crate::{config::Config, crypt::encrypt_into_file};
+use crate::types::ExistingAgeFile;
+use crate::{config::Config, crypt::encrypt_to_file};
 
 #[derive(Debug)]
 pub struct App {
@@ -97,38 +97,28 @@ impl App {
     fn decrypt_current_file(&self, filenames: Vec<String>) -> Result<(), AgeError> {
         let current_file_bufnr = nvim_oxi::api::get_current_buf();
         let current_file_path = current_file_bufnr.get_name()?;
-        let current_file = current_file_path.to_string_lossy();
-        let extension = current_file_path
-            .extension()
-            .map(|e| e.to_string_lossy().to_string());
-        match extension {
-            Some(ext) if ext == "age" => {
-                let name = current_file.rsplit_once(".");
-                if let Some((stem_name, _)) = name {
-                    if path::Path::new(stem_name).exists() {
-                        fs::remove_file(stem_name)?;
-                    }
-                    let new_scratch_buf = nvim_oxi::api::create_buf(false, true)?;
-                    nvim_oxi::api::set_current_buf(&new_scratch_buf)?;
-                    let opts = BufDeleteOpts::builder()
-                        .force(true) // Force deletion, ignoring unsaved changes
-                        .build();
-                    nvim_oxi::api::Buffer::delete(current_file_bufnr, &opts)?;
-                    decrypt_into_file(&current_file_path, path::Path::new(stem_name), filenames)
-                        .and_then(|_| {
-                            let command = format!("edit {stem_name}");
-                            nvim_oxi::api::command(&command)?;
-                            Ok(())
-                        })?;
-                }
-            }
-            Some(_) => {
-                print!("Not an age file. Aborting decryption..");
-            }
-            None => {
-                print!("This file have no extension. `.age` extension is needed for decryption");
-            }
+        let current_file = ExistingAgeFile::try_from(current_file_path)?;
+
+        let stem_name = current_file.stem_name();
+        if path::Path::new(stem_name).exists() {
+            fs::remove_file(stem_name)?;
         }
+
+        decrypt_to_file(current_file.path(), path::Path::new(stem_name), filenames)?;
+
+        let new_scratch_buf = nvim_oxi::api::create_buf(false, true)?;
+        nvim_oxi::api::set_current_buf(&new_scratch_buf)?;
+
+        let opts = BufDeleteOpts::builder()
+            .force(true) // Force deletion, ignoring unsaved changes
+            .build();
+
+        // we are deleting the buffer not the file.
+        nvim_oxi::api::Buffer::delete(current_file_bufnr, &opts)?;
+
+        let command = format!("edit {}", stem_name.replace(' ', "\\ "));
+        nvim_oxi::api::command(&command)?;
+
         Ok(())
     }
 
@@ -155,7 +145,7 @@ impl App {
         match extension_result {
             Some(ext) => {
                 let new_extension = ext.to_string_lossy().to_string() + ".age";
-                encrypt_into_file(
+                encrypt_to_file(
                     path::Path::new(&cfile.to_string()),
                     &path::Path::new(&cfile.to_string()).with_extension(new_extension),
                     filenames,
@@ -168,7 +158,7 @@ impl App {
                 })?;
             }
             None => {
-                encrypt_into_file(
+                encrypt_to_file(
                     path::Path::new(&cfile.to_string()),
                     &path::Path::new(&cfile.to_string()).with_extension("age"),
                     filenames,

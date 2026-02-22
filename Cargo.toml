@@ -1,8 +1,8 @@
 [package]
 name = "age_nvim"
-version = "2.2.0"
+version = "2.2.1"
 edition = "2021"
-license = "GPL-3.0-or-later"
+license = "MIT"
 authors = ["Abhinandh S <abhinandhsuby@proton.me>"]
 description = "Neovim plugin for encrypting and decrypting text files inside neovim using age with ease."
 homepage = "https://github.com/abhi-xyz/age.nvim"
@@ -15,9 +15,10 @@ default = []
 dev = []
 
 [dependencies]
-nvim-oxi = { version = "0.6.0", features = ["neovim-nightly"] } # neovim 11 or nightly
 age = { version = "0.11.2", default-features = false ,features = ["armor"] }
 chrono = { version = "0.4.43", default-features = false, features = ["clock"] }
+nvim-oxi = { version = "0.6.0", features = ["neovim-nightly"] } # neovim 11 or nightly
+walkdir = "2.5.0"
 
 [lib]
 name = "age"
@@ -39,7 +40,7 @@ unsafe_code = "forbid"
 unused_labels = "allow"
 
 [lints.clippy]
-unwrap_used = "forbid"
+unwrap_used = "deny"
 enum_glob_use = "deny"
 type_complexity = "deny"
 redundant_closure = "deny"
