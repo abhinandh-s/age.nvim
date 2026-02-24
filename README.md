@@ -204,6 +204,15 @@ It features small explicit keys, no config options, and UNIX-style composability
 4. **Portable Keys**: Age uses compact, user-friendly key formats, which are easy to manage and transfer.
 5. **Focused Use Case**: Age is purpose-built for encrypting files securely and efficiently, without the additional complexity of key management and email encryption that GPG supports.
 
+## Star History
+
+<a href="https://www.star-history.com/#abhinandh-s/age.nvim&type=date&legend=top-left">
+ <picture>
+   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=abhinandh-s/age.nvim&type=date&theme=dark&legend=top-left" />
+   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=abhinandh-s/age.nvim&type=date&legend=top-left" />
+   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=abhinandh-s/age.nvim&type=date&legend=top-left" />
+ </picture>
+</a>
 
 ## License
 
