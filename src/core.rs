@@ -97,7 +97,7 @@ impl App {
     fn decrypt_current_file(&self, filenames: Vec<String>) -> Result<(), AgeError> {
         let current_file_bufnr = nvim_oxi::api::get_current_buf();
         let current_file_path = current_file_bufnr.get_name()?;
-        let mut current_file = ExistingAgeFile::try_from(current_file_path)?;
+        let current_file = ExistingAgeFile::try_from(current_file_path)?;
 
         let out_path = current_file.strip_age()?;
 
@@ -128,7 +128,7 @@ impl App {
 
     fn encrypt_current_file(&self, filenames: Vec<String>) -> Result<(), AgeError> {
         let current_file_path = nvim_oxi::api::get_current_buf().get_name()?;
-        let mut current_file = ExistingNonAgeFile::try_from(current_file_path)?;
+        let current_file = ExistingNonAgeFile::try_from(current_file_path)?;
         let list_buf = nvim_oxi::api::list_bufs();
 
         let d = list_buf.len();

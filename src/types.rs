@@ -18,7 +18,7 @@ impl<'a> ExistingAgeFile<'a> {
         &self.0
     }
 
-    pub(crate) fn strip_age(&mut self) -> Result<PathBuf, AgeError> {
+    pub(crate) fn strip_age(&self) -> Result<PathBuf, AgeError> {
         Ok(self.0.with_extension(""))
     }
 }
@@ -56,7 +56,7 @@ impl<'a> ExistingNonAgeFile<'a> {
         &self.0
     }
 
-    pub(crate) fn append_age(&mut self) -> Result<PathBuf, AgeError> {
+    pub(crate) fn append_age(&self) -> Result<PathBuf, AgeError> {
         let mut new_path = self.0.to_path_buf();
         let new_name = &self
             .0
@@ -71,9 +71,8 @@ impl<'a> ExistingNonAgeFile<'a> {
             })?;
 
         new_path.set_file_name(new_name);
-        self.0 = new_path.into();
 
-        Ok(self.0.to_path_buf())
+        Ok(new_path)
     }
 }
 
@@ -133,7 +132,7 @@ mod test {
         assert!(ext_path_03.is_err());
         assert!(ext_path_04.is_err());
 
-        let mut binding = ext_path_01?;
+        let binding = ext_path_01?;
         let strip_age = binding.strip_age()?;
         assert_eq!(strip_age, Path::new(test_dir().join("file.txt").as_path()));
         Ok(())
@@ -152,7 +151,7 @@ mod test {
         assert!(ext_path_03.is_err());
         assert!(ext_path_04.is_ok());
 
-        let mut binding = ext_path_04?;
+        let binding = ext_path_04?;
         let strip_age = binding.append_age()?;
         assert_eq!(
             strip_age,
