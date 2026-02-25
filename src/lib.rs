@@ -1,3 +1,12 @@
+//! # age.nvim
+//!
+//! `age.nvim` is a Rust backend for integrating the
+//! [`age`](https://github.com/FiloSottile/age) encryption format
+//! into Neovim workflows.
+//!
+//! It provides APIs for decryption,
+//! configuration handling, and command execution.
+
 use std::{cell::RefCell, rc::Rc};
 
 use nvim_oxi::{
