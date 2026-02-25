@@ -97,14 +97,15 @@ impl App {
     fn decrypt_current_file(&self, filenames: Vec<String>) -> Result<(), AgeError> {
         let current_file_bufnr = nvim_oxi::api::get_current_buf();
         let current_file_path = current_file_bufnr.get_name()?;
-        let current_file = ExistingAgeFile::try_from(current_file_path)?;
+        let mut current_file = ExistingAgeFile::try_from(current_file_path)?;
 
-        let stem_name = current_file.stem_name();
-        if path::Path::new(stem_name).exists() {
-            fs::remove_file(stem_name)?;
+        let out_path = current_file.strip_age()?;
+
+        if out_path.as_path().exists() {
+            fs::remove_file(out_path.as_path())?;
         }
 
-        decrypt_to_file(current_file.path(), path::Path::new(stem_name), filenames)?;
+        decrypt_to_file(current_file.path(), out_path.as_path(), filenames)?;
 
         let new_scratch_buf = nvim_oxi::api::create_buf(false, true)?;
         nvim_oxi::api::set_current_buf(&new_scratch_buf)?;
@@ -116,7 +117,10 @@ impl App {
         // we are deleting the buffer not the file.
         nvim_oxi::api::Buffer::delete(current_file_bufnr, &opts)?;
 
-        let command = format!("edit {}", stem_name.replace(' ', "\\ "));
+        let command = format!(
+            "edit {}",
+            out_path.display().to_string().replace(' ', "\\ ")
+        );
         nvim_oxi::api::command(&command)?;
 
         Ok(())
@@ -124,7 +128,7 @@ impl App {
 
     fn encrypt_current_file(&self, filenames: Vec<String>) -> Result<(), AgeError> {
         let current_file_path = nvim_oxi::api::get_current_buf().get_name()?;
-        let cfile = ExistingNonAgeFile::try_from(current_file_path)?;
+        let mut current_file = ExistingNonAgeFile::try_from(current_file_path)?;
         let list_buf = nvim_oxi::api::list_bufs();
 
         let d = list_buf.len();
@@ -135,23 +139,19 @@ impl App {
             nvim_oxi::api::set_current_buf(&new_scratch_buf)?;
         } else {
             for buf in list_buf {
-                if buf.get_name()?.to_string_lossy() != cfile.to_string() {
+                if buf.get_name()?.to_string_lossy() != current_file.to_string() {
                     nvim_oxi::api::set_current_buf(&buf)?;
                     break;
                 }
             }
         }
 
-        let new_file = cfile.to_string() + ".age";
+        let new_file = current_file.append_age()?;
 
-        encrypt_to_file(
-            path::Path::new(&cfile.to_string()),
-            path::Path::new(&new_file),
-            filenames,
-        )?;
+        encrypt_to_file(current_file.path(), new_file.as_path(), filenames)?;
 
         if self.config.encrypt_and_del {
-            fs::remove_file(cfile.path())?;
+            fs::remove_file(current_file.path())?;
         }
 
         Ok(())

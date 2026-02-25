@@ -1,7 +1,10 @@
+#![deny(clippy::case_sensitive_file_extension_comparisons)]
+
 use std::borrow::Cow;
-use std::ffi::OsStr;
 use std::fmt::Display;
 use std::path::{Path, PathBuf};
+
+use crate::error::AgeError;
 
 /// Guarantees
 ///
@@ -11,38 +14,12 @@ use std::path::{Path, PathBuf};
 pub(crate) struct ExistingAgeFile<'a>(Cow<'a, Path>);
 
 impl<'a> ExistingAgeFile<'a> {
-    #[allow(dead_code)]
-    pub(crate) fn new<S>(s: &'a S) -> Option<Self>
-    where
-        S: AsRef<OsStr> + ?Sized,
-    {
-        let path = Path::new(s);
-
-        if !path.exists() {
-            return None;
-        }
-
-        if !path
-            .extension()
-            .map(|e| e.to_string_lossy().contains("age"))?
-        {
-            return None;
-        }
-
-        Some(Self(Cow::Borrowed(path)))
-    }
-
     pub(crate) fn path(&self) -> &Path {
         &self.0
     }
 
-    // Guarantees
-    //
-    // 1. File exists
-    // 2. It have `.age` extension
-    //
-    pub(crate) fn stem_name(&self) -> &str {
-        self.0.file_stem().and_then(|s| s.to_str()).unwrap_or("")
+    pub(crate) fn strip_age(&mut self) -> Result<PathBuf, AgeError> {
+        Ok(self.0.with_extension(""))
     }
 }
 
@@ -61,10 +38,9 @@ impl TryFrom<PathBuf> for ExistingAgeFile<'_> {
             return Err("File does not exists.");
         }
 
-        if path
+        if !path
             .extension()
-            .map(|e| e.eq_ignore_ascii_case("age"))
-            .is_none()
+            .is_some_and(|e| e.eq_ignore_ascii_case("age"))
         {
             return Err("File does not have `.age` extension.");
         }
@@ -79,25 +55,41 @@ impl<'a> ExistingNonAgeFile<'a> {
     pub(crate) fn path(&self) -> &Path {
         &self.0
     }
+
+    pub(crate) fn append_age(&mut self) -> Result<PathBuf, AgeError> {
+        let mut new_path = self.0.to_path_buf();
+        let new_name = &self
+            .0
+            .file_name()
+            .map(|name| {
+                let mut n = name.to_os_string();
+                n.push(".age");
+                n
+            })
+            .ok_or_else(|| {
+                std::io::Error::new(std::io::ErrorKind::InvalidInput, "Path has no filename")
+            })?;
+
+        new_path.set_file_name(new_name);
+        self.0 = new_path.into();
+
+        Ok(self.0.to_path_buf())
+    }
 }
 
 impl TryFrom<PathBuf> for ExistingNonAgeFile<'_> {
-    type Error = String;
+    type Error = &'static str;
 
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
         if !path.exists() {
-            return Err("File does not exists.".to_owned());
+            return Err("File does not exists.");
         }
 
         if path
             .extension()
             .is_some_and(|e| e.eq_ignore_ascii_case("age"))
         {
-            let err = format!(
-                "input: {}\nFile have `.age` extension, it's already encrypted.",
-                path.display()
-            );
-            return Err(err);
+            return Err("File have `.age` extension, it's already encrypted.");
         }
 
         Ok(Self(Cow::Owned(path)))
@@ -113,23 +105,59 @@ impl Display for ExistingNonAgeFile<'_> {
 
 #[cfg(test)]
 mod test {
-    use crate::types::ExistingAgeFile;
+    use std::path::{Path, PathBuf};
+    use std::sync::OnceLock;
+
+    use crate::error::AgeError;
+    use crate::types::{ExistingAgeFile, ExistingNonAgeFile};
+
+    static TEST_DIR: OnceLock<PathBuf> = OnceLock::new();
+
+    fn test_dir() -> &'static PathBuf {
+        TEST_DIR.get_or_init(|| {
+            let base = std::env::var("CARGO_MANIFEST_DIR").unwrap_or_else(|_| "".into());
+            PathBuf::from(base).join("tests/types/some_dirs")
+        })
+    }
 
     #[test]
     #[allow(clippy::unwrap_used)]
-    fn existing_age_file_t() {
-        let s = std::env::var("PWD").unwrap();
-        let true_01 = s.clone() + "/tests/some/dir/file.txt.age";
-        let false_01 = s.clone() + "/tests/some/dir/doesntextstfile.txt.age";
-        let false_02 = s.clone() + "/tests/some/dir/doesntextstfile.txt";
-        let false_03 = s.clone() + "/tests/some/dir/file.txt";
-        let ext_path_01 = ExistingAgeFile::new(&true_01);
-        let ext_path_02 = ExistingAgeFile::new(&false_01);
-        let ext_path_03 = ExistingAgeFile::new(&false_02);
-        let ext_path_04 = ExistingAgeFile::new(&false_03);
-        assert!(ext_path_01.is_some());
-        assert!(ext_path_02.is_none());
-        assert!(ext_path_03.is_none());
-        assert!(ext_path_04.is_none());
+    fn existing_age_file_t() -> Result<(), AgeError> {
+        let ext_path_01 = ExistingAgeFile::try_from(test_dir().join("file.txt.age"));
+        let ext_path_02 = ExistingAgeFile::try_from(test_dir().join("doesntextstfile.txt.age"));
+        let ext_path_03 = ExistingAgeFile::try_from(test_dir().join("doesntextstfile.txt"));
+        let ext_path_04 = ExistingAgeFile::try_from(test_dir().join("file.txt"));
+
+        assert!(ext_path_01.is_ok());
+        assert!(ext_path_02.is_err());
+        assert!(ext_path_03.is_err());
+        assert!(ext_path_04.is_err());
+
+        let mut binding = ext_path_01?;
+        let strip_age = binding.strip_age()?;
+        assert_eq!(strip_age, Path::new(test_dir().join("file.txt").as_path()));
+        Ok(())
+    }
+
+    #[test]
+    #[allow(clippy::unwrap_used)]
+    fn existing_non_age_file_t() -> Result<(), AgeError> {
+        let ext_path_01 = ExistingNonAgeFile::try_from(test_dir().join("file.txt.age"));
+        let ext_path_02 = ExistingNonAgeFile::try_from(test_dir().join("doesntextstfile.txt.age"));
+        let ext_path_03 = ExistingNonAgeFile::try_from(test_dir().join("doesntextstfile.txt"));
+        let ext_path_04 = ExistingNonAgeFile::try_from(test_dir().join("file.txt"));
+
+        assert!(ext_path_01.is_err());
+        assert!(ext_path_02.is_err());
+        assert!(ext_path_03.is_err());
+        assert!(ext_path_04.is_ok());
+
+        let mut binding = ext_path_04?;
+        let strip_age = binding.append_age()?;
+        assert_eq!(
+            strip_age,
+            Path::new(test_dir().join("file.txt.age").as_path())
+        );
+        Ok(())
     }
 }
