@@ -1,10 +1,6 @@
-#![deny(clippy::case_sensitive_file_extension_comparisons)]
-
 use std::borrow::Cow;
 use std::fmt::Display;
 use std::path::{Path, PathBuf};
-
-use crate::error::AgeError;
 
 /// Guarantees
 ///
@@ -18,8 +14,8 @@ impl<'a> ExistingAgeFile<'a> {
         &self.0
     }
 
-    pub(crate) fn strip_age(&self) -> Result<PathBuf, AgeError> {
-        Ok(self.0.with_extension(""))
+    pub(crate) fn strip_age(&self) -> PathBuf {
+        self.0.with_extension("")
     }
 }
 
@@ -56,23 +52,8 @@ impl<'a> ExistingNonAgeFile<'a> {
         &self.0
     }
 
-    pub(crate) fn append_age(&self) -> Result<PathBuf, AgeError> {
-        let mut new_path = self.0.to_path_buf();
-        let new_name = &self
-            .0
-            .file_name()
-            .map(|name| {
-                let mut n = name.to_os_string();
-                n.push(".age");
-                n
-            })
-            .ok_or_else(|| {
-                std::io::Error::new(std::io::ErrorKind::InvalidInput, "Path has no filename")
-            })?;
-
-        new_path.set_file_name(new_name);
-
-        Ok(new_path)
+    pub(crate) fn append_age(&self) -> PathBuf {
+        self.0.with_added_extension("age")
     }
 }
 
@@ -80,6 +61,26 @@ impl TryFrom<PathBuf> for ExistingNonAgeFile<'_> {
     type Error = &'static str;
 
     fn try_from(path: PathBuf) -> Result<Self, Self::Error> {
+        if !path.exists() {
+            return Err("File does not exists.");
+        }
+
+        if path
+            .extension()
+            .is_some_and(|e| e.eq_ignore_ascii_case("age"))
+        {
+            return Err("File have `.age` extension, it's already encrypted.");
+        }
+
+        Ok(Self(Cow::Owned(path)))
+    }
+}
+
+impl TryFrom<&str> for ExistingNonAgeFile<'_> {
+    type Error = &'static str;
+
+    fn try_from(s: &str) -> Result<Self, Self::Error> {
+        let path = Path::new(s).to_path_buf();
         if !path.exists() {
             return Err("File does not exists.");
         }
@@ -119,13 +120,25 @@ mod test {
         })
     }
 
+    macro_rules! test_age_file {
+        ($str:literal) => {
+            ExistingAgeFile::try_from(test_dir().join($str))
+        };
+    }
+
+    macro_rules! test_non_age_file {
+        ($str:literal) => {
+            ExistingNonAgeFile::try_from(test_dir().join($str))
+        };
+    }
+
     #[test]
     #[allow(clippy::unwrap_used)]
     fn existing_age_file_t() -> Result<(), AgeError> {
-        let ext_path_01 = ExistingAgeFile::try_from(test_dir().join("file.txt.age"));
-        let ext_path_02 = ExistingAgeFile::try_from(test_dir().join("doesntextstfile.txt.age"));
-        let ext_path_03 = ExistingAgeFile::try_from(test_dir().join("doesntextstfile.txt"));
-        let ext_path_04 = ExistingAgeFile::try_from(test_dir().join("file.txt"));
+        let ext_path_01 = test_age_file!("file.txt.age");
+        let ext_path_02 = test_age_file!("doesntextstfile.txt.age");
+        let ext_path_03 = test_age_file!("doesntextstfile.txt");
+        let ext_path_04 = test_age_file!("file.txt");
 
         assert!(ext_path_01.is_ok());
         assert!(ext_path_02.is_err());
@@ -133,7 +146,7 @@ mod test {
         assert!(ext_path_04.is_err());
 
         let binding = ext_path_01?;
-        let strip_age = binding.strip_age()?;
+        let strip_age = binding.strip_age();
         assert_eq!(strip_age, Path::new(test_dir().join("file.txt").as_path()));
         Ok(())
     }
@@ -141,10 +154,10 @@ mod test {
     #[test]
     #[allow(clippy::unwrap_used)]
     fn existing_non_age_file_t() -> Result<(), AgeError> {
-        let ext_path_01 = ExistingNonAgeFile::try_from(test_dir().join("file.txt.age"));
-        let ext_path_02 = ExistingNonAgeFile::try_from(test_dir().join("doesntextstfile.txt.age"));
-        let ext_path_03 = ExistingNonAgeFile::try_from(test_dir().join("doesntextstfile.txt"));
-        let ext_path_04 = ExistingNonAgeFile::try_from(test_dir().join("file.txt"));
+        let ext_path_01 = test_non_age_file!("file.txt.age");
+        let ext_path_02 = test_non_age_file!("doesntextstfile.txt.age");
+        let ext_path_03 = test_non_age_file!("doesntextstfile.txt");
+        let ext_path_04 = test_non_age_file!("file.txt");
 
         assert!(ext_path_01.is_err());
         assert!(ext_path_02.is_err());
@@ -152,7 +165,7 @@ mod test {
         assert!(ext_path_04.is_ok());
 
         let binding = ext_path_04?;
-        let strip_age = binding.append_age()?;
+        let strip_age = binding.append_age();
         assert_eq!(
             strip_age,
             Path::new(test_dir().join("file.txt.age").as_path())

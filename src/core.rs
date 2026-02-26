@@ -1,6 +1,6 @@
 use age::secrecy::ExposeSecret;
 use std::env::current_dir;
-use std::{fs, path};
+use std::fs;
 
 use nvim_oxi::api::opts::BufDeleteOpts;
 use nvim_oxi::{print, Dictionary, Result as OxiResult};
@@ -99,7 +99,7 @@ impl App {
         let current_file_path = current_file_bufnr.get_name()?;
         let current_file = ExistingAgeFile::try_from(current_file_path)?;
 
-        let out_path = current_file.strip_age()?;
+        let out_path = current_file.strip_age();
 
         if out_path.as_path().exists() {
             fs::remove_file(out_path.as_path())?;
@@ -146,7 +146,7 @@ impl App {
             }
         }
 
-        let new_file = current_file.append_age()?;
+        let new_file = current_file.append_age();
 
         encrypt_to_file(current_file.path(), new_file.as_path(), filenames)?;
 
@@ -158,13 +158,12 @@ impl App {
     }
 
     pub fn decrypt_to_string(&self, file_path: String) -> Result<String, AgeError> {
-        let path = path::Path::new(&file_path);
-        validate_path(path)?;
+        let file = ExistingNonAgeFile::try_from(file_path.as_str())?;
 
         // Logic: If private_key_file is set, use that. Otherwise use the string.
         if !self.config.key_file.is_empty() {
             let id_file = self.config.key_file.to_string();
-            return decrypt_to_string(path, vec![id_file]);
+            return decrypt_to_string(file.path(), vec![id_file]);
         }
 
         Err(AgeError::new(
@@ -189,20 +188,8 @@ impl App {
         file_path: String,
         key_files: Vec<String>,
     ) -> Result<String, AgeError> {
-        let path = path::Path::new(&file_path);
-        validate_path(path)?;
+        let file = ExistingNonAgeFile::try_from(file_path.as_str())?;
 
-        decrypt_to_string(path, key_files)
+        decrypt_to_string(file.path(), key_files)
     }
-}
-
-fn validate_path(path: &path::Path) -> Result<(), AgeError> {
-    if !path.exists() {
-        return Err(AgeError::new(format!(
-            "File not found: {}",
-            path.to_string_lossy()
-        )));
-    }
-
-    Ok(())
 }

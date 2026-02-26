@@ -12,7 +12,6 @@ keywords = ["tool", "utility"]
 
 [features]
 default = []
-dev = []
 
 [dependencies]
 age = { version = "0.11.2", default-features = false ,features = ["armor"] }
@@ -45,3 +44,4 @@ enum_glob_use = "deny"
 type_complexity = "deny"
 redundant_closure = "deny"
 str_to_string = "deny"
+case_sensitive_file_extension_comparisons = "deny"
