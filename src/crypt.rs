@@ -227,14 +227,21 @@ fn get_full_path(input: &str) -> Result<std::path::PathBuf, AgeError> {
     Err(AgeError::new("Can't parse path".to_owned()))
 }
 
+#[allow(clippy::unwrap_used)]
 #[cfg(test)]
 mod test {
 
-    use crate::crypt::{
-        decrypt_from_string, decrypt_to_file, decrypt_to_string, encrypt_path_to_string,
-        encrypt_to_file, encrypt_to_string, get_full_path,
+    use age::secrecy::ExposeSecret;
+    use std::path::PathBuf;
+    use tempfile::TempDir;
+
+    use crate::{
+        crypt::{
+            decrypt_from_string, decrypt_to_file, decrypt_to_string, encrypt_path_to_string,
+            encrypt_to_file, encrypt_to_string, get_full_path,
+        },
+        error::AgeError,
     };
-    use crate::error::AgeError;
 
     #[test]
     fn into_file() -> Result<(), AgeError> {
@@ -253,6 +260,7 @@ mod test {
 
         Ok(())
     }
+
     #[test]
     fn to_and_as_string() -> Result<(), AgeError> {
         let key_files = vec!["tests/test_key.txt".to_owned()];
@@ -274,31 +282,423 @@ mod test {
         Ok(())
     }
 
-    #[test]
-    #[ignore = "Only works on my machine"]
-    fn path_fix() {
-        let shortcut = "~/git/test_01/test/some/file.txt";
-        let rooted = "/home/abhi/git/test_01/test/some/file.txt";
-        let deep_reletive = "./test/some/file.txt";
-        let deep_reletive_02 = "../test_01/test/some/file.txt";
-        let reletive = "test/some/file.txt";
+    // ----------------------------------------------------------------
+    // Test Fixture
+    // ----------------------------------------------------------------
+    //
+    // Generates a real age x25519 key at test time and writes it to
+    // a temp directory alongside test plaintext files.
+    //
+    // Layout:
+    //   <tmp>/
+    //     key.txt              <- generated age identity file
+    //     plaintext.txt        <- "Hello, age!\n"
+    //     empty.txt            <- ""
+    //     binary.bin           <- raw bytes including nulls
+    //     multiline.txt        <- multiple lines
+    //
+    struct Fixture {
+        dir: TempDir,
+        pub key_path: PathBuf,
+    }
 
-        for i in [shortcut, rooted, reletive, deep_reletive, deep_reletive_02] {
-            assert!(get_full_path(i).is_ok())
+    impl Fixture {
+        fn new() -> Self {
+            let dir = tempfile::tempdir().expect("failed to create temp dir");
+
+            // Generate a fresh age identity
+            let identity = age::x25519::Identity::generate();
+            let public_key = identity.to_public().to_string();
+            let time = chrono::Local::now();
+            let key_contents = format!(
+                "# created: {}\n# public key: {}\n{}",
+                time.to_rfc3339_opts(chrono::SecondsFormat::Secs, true),
+                public_key,
+                identity.to_string().expose_secret()
+            );
+
+            let key_path = dir.path().join("key.txt");
+            std::fs::write(&key_path, key_contents).unwrap();
+
+            // Test files
+            std::fs::write(dir.path().join("plaintext.txt"), b"Hello, age!\n").unwrap();
+            std::fs::write(dir.path().join("empty.txt"), b"").unwrap();
+            std::fs::write(
+                dir.path().join("multiline.txt"),
+                b"line one\nline two\nline three\n",
+            )
+            .unwrap();
+            // binary with null bytes and high bytes
+            std::fs::write(
+                dir.path().join("binary.bin"),
+                [0x00, 0xFF, 0x1B, 0x0A, 0x41, 0x00],
+            )
+            .unwrap();
+
+            Self { dir, key_path }
+        }
+
+        fn path(&self, name: &str) -> PathBuf {
+            self.dir.path().join(name)
+        }
+
+        fn key_files(&self) -> Vec<String> {
+            vec![self.key_path.to_string_lossy().to_string()]
+        }
+
+        fn read(&self, name: &str) -> String {
+            std::fs::read_to_string(self.path(name)).unwrap()
         }
     }
 
+    // ----------------------------------------------------------------
+    // encrypt_to_file / decrypt_to_file  (file -> file roundtrip)
+    // ----------------------------------------------------------------
+
     #[test]
-    #[ignore = "Only works on my machine"]
-    fn identities_file() -> Result<(), AgeError> {
-        let key_files = vec!["~/.config/sops/age/keys.txt".to_owned()];
+    fn file_roundtrip_plaintext() -> Result<(), AgeError> {
+        let f = Fixture::new();
+        let input = f.path("plaintext.txt");
+        let encrypted = f.path("plaintext.txt.age");
+        let decrypted = f.path("plaintext_out.txt");
 
-        let enc = encrypt_to_string("plaintext".to_owned(), key_files.clone())?;
+        encrypt_to_file(&input, &encrypted, f.key_files())?;
+        decrypt_to_file(&encrypted, &decrypted, f.key_files())?;
 
-        let dec = decrypt_from_string(enc, key_files.clone())?;
+        assert_eq!(
+            std::fs::read_to_string(&input).unwrap(),
+            std::fs::read_to_string(&decrypted).unwrap()
+        );
+        Ok(())
+    }
 
-        assert_eq!("plaintext".to_owned(), dec);
+    #[test]
+    fn file_roundtrip_multiline() -> Result<(), AgeError> {
+        let f = Fixture::new();
+        let input = f.path("multiline.txt");
+        let encrypted = f.path("multiline.txt.age");
+        let decrypted = f.path("multiline_out.txt");
+
+        encrypt_to_file(&input, &encrypted, f.key_files())?;
+        decrypt_to_file(&encrypted, &decrypted, f.key_files())?;
+
+        assert_eq!(
+            f.read("multiline.txt"),
+            std::fs::read_to_string(&decrypted).unwrap()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn file_roundtrip_empty_file() -> Result<(), AgeError> {
+        let f = Fixture::new();
+        let input = f.path("empty.txt");
+        let encrypted = f.path("empty.txt.age");
+        let decrypted = f.path("empty_out.txt");
+
+        encrypt_to_file(&input, &encrypted, f.key_files())?;
+        decrypt_to_file(&encrypted, &decrypted, f.key_files())?;
+
+        assert_eq!(
+            std::fs::read(&input).unwrap(),
+            std::fs::read(&decrypted).unwrap()
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn encrypted_file_is_not_plaintext() -> Result<(), AgeError> {
+        let f = Fixture::new();
+        let input = f.path("plaintext.txt");
+        let encrypted = f.path("plaintext.txt.age");
+
+        encrypt_to_file(&input, &encrypted, f.key_files())?;
+
+        let raw = std::fs::read_to_string(&encrypted).unwrap();
+
+        // should be ASCII armored age format
+        assert!(raw.contains("-----BEGIN AGE ENCRYPTED FILE-----"));
+        assert!(raw.contains("-----END AGE ENCRYPTED FILE-----"));
+
+        // must not contain the original plaintext
+        assert!(!raw.contains("Hello, age!"));
+        Ok(())
+    }
+
+    #[test]
+    fn encrypted_files_are_nondeterministic() -> Result<(), AgeError> {
+        // age uses ephemeral keys - two encryptions of the same plaintext
+        // must produce different ciphertext
+        let f = Fixture::new();
+        let input = f.path("plaintext.txt");
+        let enc1 = f.path("enc1.age");
+        let enc2 = f.path("enc2.age");
+
+        encrypt_to_file(&input, &enc1, f.key_files())?;
+        encrypt_to_file(&input, &enc2, f.key_files())?;
+
+        let c1 = std::fs::read(&enc1).unwrap();
+        let c2 = std::fs::read(&enc2).unwrap();
+        assert_ne!(c1, c2, "age encryption must be nondeterministic");
+        Ok(())
+    }
+
+    #[test]
+    fn decrypt_with_wrong_key_fails() {
+        let f = Fixture::new();
+        let wrong = Fixture::new(); // different key
+
+        let input = f.path("plaintext.txt");
+        let encrypted = f.path("plaintext.txt.age");
+        let decrypted = f.path("out.txt");
+
+        encrypt_to_file(&input, &encrypted, f.key_files()).unwrap();
+
+        // decrypt using a completely different key
+        let result = decrypt_to_file(&encrypted, &decrypted, wrong.key_files());
+        assert!(result.is_err(), "decryption with wrong key must fail");
+    }
+
+    #[test]
+    fn encrypt_nonexistent_file_fails() {
+        let f = Fixture::new();
+        let missing = f.path("does_not_exist.txt");
+        let out = f.path("out.age");
+
+        let result = encrypt_to_file(&missing, &out, f.key_files());
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn decrypt_nonexistent_file_fails() {
+        let f = Fixture::new();
+        let missing = f.path("does_not_exist.age");
+        let out = f.path("out.txt");
+
+        let result = decrypt_to_file(&missing, &out, f.key_files());
+        assert!(result.is_err());
+    }
+
+    // ----------------------------------------------------------------
+    // encrypt_path_to_string / decrypt_from_string  (string roundtrip)
+    // ----------------------------------------------------------------
+
+    #[test]
+    fn string_roundtrip_from_file() -> Result<(), AgeError> {
+        let f = Fixture::new();
+        let input = f.path("plaintext.txt");
+        let original = f.read("plaintext.txt");
+
+        let encrypted = encrypt_path_to_string(&input, f.key_files())?;
+        let decrypted = decrypt_from_string(encrypted, f.key_files())?;
+
+        assert_eq!(original, decrypted);
+        Ok(())
+    }
+
+    #[test]
+    fn string_roundtrip_from_string() -> Result<(), AgeError> {
+        let f = Fixture::new();
+        let plaintext = "top secret value 🔑\n".to_owned();
+
+        let encrypted = encrypt_to_string(plaintext.clone(), f.key_files())?;
+        let decrypted = decrypt_from_string(encrypted, f.key_files())?;
+
+        assert_eq!(plaintext, decrypted);
+        Ok(())
+    }
+
+    #[test]
+    fn string_roundtrip_empty_string() -> Result<(), AgeError> {
+        let f = Fixture::new();
+
+        let encrypted = encrypt_to_string("".to_owned(), f.key_files())?;
+        let decrypted = decrypt_from_string(encrypted, f.key_files())?;
+
+        assert_eq!("", decrypted);
+        Ok(())
+    }
+
+    #[test]
+    fn string_roundtrip_unicode() -> Result<(), AgeError> {
+        let f = Fixture::new();
+        let plaintext = "日本語テスト\nمرحبا\n🦀🔐\n".to_owned();
+
+        let encrypted = encrypt_to_string(plaintext.clone(), f.key_files())?;
+        let decrypted = decrypt_from_string(encrypted, f.key_files())?;
+
+        assert_eq!(plaintext, decrypted);
+        Ok(())
+    }
+
+    #[test]
+    fn string_roundtrip_large_payload() -> Result<(), AgeError> {
+        let f = Fixture::new();
+        // 1MB of data
+        let plaintext = "a".repeat(1024 * 1024);
+
+        let encrypted = encrypt_to_string(plaintext.clone(), f.key_files())?;
+        let decrypted = decrypt_from_string(encrypted, f.key_files())?;
+
+        assert_eq!(plaintext, decrypted);
+        Ok(())
+    }
+
+    #[test]
+    fn encrypted_string_is_ascii_armored() -> Result<(), AgeError> {
+        let f = Fixture::new();
+        let encrypted = encrypt_to_string("secret".to_owned(), f.key_files())?;
+
+        assert!(encrypted.contains("-----BEGIN AGE ENCRYPTED FILE-----"));
+        assert!(encrypted.contains("-----END AGE ENCRYPTED FILE-----"));
+        Ok(())
+    }
+
+    #[test]
+    fn decrypt_from_string_with_wrong_key_fails() {
+        let f = Fixture::new();
+        let wrong = Fixture::new();
+
+        let encrypted = encrypt_to_string("secret".to_owned(), f.key_files()).unwrap();
+        let result = decrypt_from_string(encrypted, wrong.key_files());
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn decrypt_from_string_with_garbage_fails() {
+        let f = Fixture::new();
+        let garbage = "this is not an age encrypted file".to_owned();
+
+        let result = decrypt_from_string(garbage, f.key_files());
+        assert!(result.is_err());
+    }
+
+    // ----------------------------------------------------------------
+    // decrypt_to_string
+    // ----------------------------------------------------------------
+
+    #[test]
+    fn decrypt_to_string_matches_original() -> Result<(), AgeError> {
+        let f = Fixture::new();
+        let input = f.path("plaintext.txt");
+        let encrypted = f.path("plaintext.txt.age");
+        let original = f.read("plaintext.txt");
+
+        encrypt_to_file(&input, &encrypted, f.key_files())?;
+        let decrypted = decrypt_to_string(&encrypted, f.key_files())?;
+
+        assert_eq!(original, decrypted);
+        Ok(())
+    }
+
+    // ----------------------------------------------------------------
+    // Multiple recipients
+    // ----------------------------------------------------------------
+    //
+    // age supports encrypting to multiple recipients so any one of their
+    // keys can decrypt. Test that this works correctly.
+    //
+
+    #[test]
+    fn encrypt_to_multiple_recipients_any_key_can_decrypt() -> Result<(), AgeError> {
+        let alice = Fixture::new();
+        let bob = Fixture::new();
+
+        // encrypt with both alice and bob's keys
+        let both_keys = vec![
+            alice.key_path.to_string_lossy().to_string(),
+            bob.key_path.to_string_lossy().to_string(),
+        ];
+
+        let plaintext = "shared secret".to_owned();
+        let encrypted = encrypt_to_string(plaintext.clone(), both_keys)?;
+
+        // alice can decrypt
+        let dec_alice = decrypt_from_string(encrypted.clone(), alice.key_files())?;
+        assert_eq!(plaintext, dec_alice);
+
+        // bob can also decrypt
+        let dec_bob = decrypt_from_string(encrypted.clone(), bob.key_files())?;
+        assert_eq!(plaintext, dec_bob);
 
         Ok(())
+    }
+
+    #[test]
+    fn third_party_cannot_decrypt_multi_recipient() -> Result<(), AgeError> {
+        let alice = Fixture::new();
+        let bob = Fixture::new();
+        let eve = Fixture::new(); // not a recipient
+
+        let both_keys = vec![
+            alice.key_path.to_string_lossy().to_string(),
+            bob.key_path.to_string_lossy().to_string(),
+        ];
+
+        let encrypted = encrypt_to_string("secret".to_owned(), both_keys)?;
+        let result = decrypt_from_string(encrypted, eve.key_files());
+
+        assert!(result.is_err());
+        Ok(())
+    }
+
+    // ----------------------------------------------------------------
+    // get_full_path
+    // ----------------------------------------------------------------
+
+    #[test]
+    fn get_full_path_absolute_path() {
+        let f = Fixture::new();
+        let abs = f.key_path.to_string_lossy().to_string();
+
+        let result = get_full_path(&abs);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), f.key_path);
+    }
+
+    #[test]
+    fn get_full_path_nonexistent_fails() {
+        let f = Fixture::new();
+        let missing = f.path("no_such_file.txt").to_string_lossy().to_string();
+
+        assert!(get_full_path(&missing).is_err());
+    }
+
+    #[test]
+    fn get_full_path_directory_fails() {
+        // directories are not files - should return Err
+        let f = Fixture::new();
+        let dir = f.dir.path().to_string_lossy().to_string();
+
+        assert!(get_full_path(&dir).is_err());
+    }
+
+    #[test]
+    fn get_full_path_tilde_expansion() {
+        // Only meaningful if HOME is set, which it always is in CI/dev
+        let home = match std::env::var("HOME") {
+            Ok(h) => h,
+            Err(_) => return, // skip if HOME not set
+        };
+
+        // Create a real file under HOME to test tilde expansion
+        let tmp = tempfile::NamedTempFile::new_in(&home).unwrap();
+        let filename = tmp
+            .path()
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .to_string();
+        let tilde_path = format!("~/{}", filename);
+
+        let result = get_full_path(&tilde_path);
+        assert!(result.is_ok());
+        assert_eq!(result.unwrap(), tmp.path());
+    }
+
+    #[test]
+    fn get_full_path_empty_string_fails() {
+        assert!(get_full_path("").is_err());
     }
 }

@@ -72,10 +72,7 @@ fn get_key_files(arg: String) -> Result<Vec<String>, AgeError> {
             if arg.starts_with('/') {
                 arg
             } else {
-                std::env::current_dir()
-                    .unwrap_or_default()
-                    .to_string_lossy()
-                    .to_string()
+                std::env::var("PWD")?
             }
         }
     };
@@ -118,9 +115,9 @@ fn expand_tilde<P: AsRef<Path>>(path: P) -> std::path::PathBuf {
         return p.to_path_buf();
     }
 
-    if let Some(home_dir) = std::env::home_dir() {
+    if let Ok(home_dir) = std::env::var("HOME") {
         if p == Path::new("~") {
-            return home_dir;
+            return home_dir.into();
         }
 
         if let Ok(suffix) = p.strip_prefix("~") {

@@ -90,7 +90,11 @@ impl App {
             key.to_string().expose_secret()
         );
 
-        std::fs::write(current_dir()?.join("key.txt"), contents)?;
+        let path = current_dir()?.join("key.txt");
+
+        std::fs::write(path.as_path(), contents)?;
+        nvim_oxi::print!("Generated key file: {}", path.display());
+
         Ok(())
     }
 
@@ -160,7 +164,7 @@ impl App {
     pub fn decrypt_to_string(&self, file_path: String) -> Result<String, AgeError> {
         let file = ExistingNonAgeFile::try_from(file_path.as_str())?;
 
-        // Logic: If private_key_file is set, use that. Otherwise use the string.
+        // Logic: If private_key_file is set, use that.
         if !self.config.key_file.is_empty() {
             let id_file = self.config.key_file.to_string();
             return decrypt_to_string(file.path(), vec![id_file]);
