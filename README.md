@@ -16,18 +16,9 @@
 - [Usage](#usage)  
 - [What is age?](#what-is-age)  
 
-## Breaking Changes from v.2.2.0 [2026-02-11]
+### Breaking Changes have been introduced in v.2.2.0 [2026-02-11]
+See the [Full Changelog](CHANGELOG.md#220---2026-02-11) for migration details and code examples.
 
-Due to security conserns the fields `private_key` and `public_key` in config has been removed. Instead user can specify `key_file`.
-
-```diff 
-  require('age').setup({
-        encrypt_and_del = true, -- will remove the original file after encrypting.
--       private_key = "private_key"
--       public_key = "public_key"
-+       key_file = vim.fn.expand("~/.config/sops/age/keys.txt"),
-  })
-```
 
 ## Installation
 
@@ -203,16 +194,6 @@ It features small explicit keys, no config options, and UNIX-style composability
 3. **Minimal Attack Surface**: Age's codebase is minimal and easier to audit compared to the complex and extensive GPG ecosystem.
 4. **Portable Keys**: Age uses compact, user-friendly key formats, which are easy to manage and transfer.
 5. **Focused Use Case**: Age is purpose-built for encrypting files securely and efficiently, without the additional complexity of key management and email encryption that GPG supports.
-
-## Star History
-
-<a href="https://www.star-history.com/#abhinandh-s/age.nvim&type=date&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/svg?repos=abhinandh-s/age.nvim&type=date&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/svg?repos=abhinandh-s/age.nvim&type=date&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/svg?repos=abhinandh-s/age.nvim&type=date&legend=top-left" />
- </picture>
-</a>
 
 ## License
 
