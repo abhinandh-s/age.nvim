@@ -22,6 +22,33 @@ See the [Full Changelog](CHANGELOG.md#220---2026-02-11) for migration details an
 
 ## Installation
 
+### neovim native package manager 
+
+```lua 
+vim.pack.add({
+  'https://github.com/abhinandh-s/age.nvim',
+})
+
+require('age').setup({
+  encrypt_and_del = true,
+  key_file = vim.fn.expand("~/.config/sops/age/keys.txt"),
+})
+```
+
+### lazy.nvim 
+
+```lua 
+{
+    'abhinandh-s/age.nvim',
+    cmd = { "Age" },
+    config = function()
+      require('age').setup({
+        key_file = vim.fn.expand("~/.config/sops/age/keys.txt"),
+      })
+    end
+}
+```
+
 > [!WARNING]
 > Master branch supports Neovim version >= 0.11
 
