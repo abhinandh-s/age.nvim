@@ -190,7 +190,7 @@ fn load_recipients(
 /// get all Identity's from provided `key_files`
 fn load_identities(
     filenames: Vec<String>,
-) -> Result<Vec<Box<dyn age::Identity>>, Box<dyn std::error::Error>> {
+) -> Result<Vec<Box<dyn age::Identity + Send + Sync>>, Box<dyn std::error::Error>> {
     let mut output = Vec::new();
     for filename in filenames {
         let full_path = get_full_path(&filename)?.to_string_lossy().to_string();
