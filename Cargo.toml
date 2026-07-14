@@ -14,7 +14,7 @@ keywords = ["tool", "utility"]
 default = []
 
 [dependencies]
-age = { version = "0.11.3", default-features = false ,features = ["armor"] }
+age = { version = "0.12.0", default-features = false ,features = ["armor"] }
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 nvim-oxi = { version = "0.6.0", features = ["neovim-nightly"] } # neovim 11 or nightly
 walkdir = "2.5.0"
