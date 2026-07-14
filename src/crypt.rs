@@ -191,7 +191,7 @@ fn load_recipients(
 fn load_identities(
     filenames: Vec<String>,
 ) -> Result<Vec<Box<dyn age::Identity + Send + Sync>>, Box<dyn std::error::Error>> {
-    let mut output = Vec::new();
+    let mut output: Vec<Box<dyn age::Identity + Send + Sync>> = Vec::new();
     for filename in filenames {
         let full_path = get_full_path(&filename)?.to_string_lossy().to_string();
         output.extend(age::IdentityFile::from_file(full_path)?.into_identities()?);
