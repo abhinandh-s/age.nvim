@@ -25,3 +25,5 @@ jobs:
           cd tests/config
           ls
           nvim --headless -u init.lua +"qa!"
+          cat secret.md
+          cat secret.md.age
