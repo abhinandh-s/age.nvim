@@ -1,4 +1,6 @@
 on: push
+      paths:
+      - 'src/**'
 name: Clippy check
 
 # Make sure CI fails on all warnings, including Clippy lints
