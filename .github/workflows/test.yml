@@ -22,7 +22,8 @@ jobs:
       - name: ls before
         run: |
           cd tests/config
-          ls -la
+          ls
+          stat secret.md
 
       - name: Run Age genkey test
         run: |
@@ -32,7 +33,9 @@ jobs:
       - name: ls after
         run: |
           cd tests/config
-          ls -la
+          ls
+          stat secret.md
+          stat secret.md.age
 
       - name: cat Decrypted File
         run: |
