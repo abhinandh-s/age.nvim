@@ -20,7 +20,9 @@ jobs:
           version: nightly
 
       - name: ls before
-        run: ls
+        run: |
+          cd tests/config
+          ls
 
       - name: Run Age genkey test
         run: |
@@ -28,14 +30,18 @@ jobs:
           nvim --headless -u init.lua +"qa!"
 
       - name: ls after
-        run: ls
+        run: |
+          cd tests/config
+          ls
 
-      #- name: cat Decrypted File
-      #  run: |
-      #    cat secret.md
+      - name: cat Decrypted File
+        run: |
+          cd tests/config
+          cat secret.md
        
       - name: cat Encrypted File
         run: |
+          cd tests/config
           cat secret.md.age
 
     
