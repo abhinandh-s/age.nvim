@@ -42,6 +42,17 @@ require("lazy").setup({
   checker = { enabled = true },
 })
 
+
+local success, err = pcall(function()
+  vim.cmd("Age genkey")
+end)
+
+if not success then
+  print("[CMD Error]: " .. tostring(err))
+  vim.cmd("cquit")
+end
+
+
 --[[
 vim.pack.add({
   'https://github.com/abhinandh-s/age.nvim',
