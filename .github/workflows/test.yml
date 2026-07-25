@@ -24,4 +24,4 @@ jobs:
           nvim --headless -h
           ls 
           nvim --headless -u tests/config/init.lua +"qa!"
-          ls
+          nvim tests/config/secret.md --headless -u tests/config/init.lua + "Age encrypt" +"qa!"
