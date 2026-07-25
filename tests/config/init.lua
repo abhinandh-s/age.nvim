@@ -53,6 +53,16 @@ if not success then
   vim.cmd("cquit")
 end
 
+local success, err = pcall(function()
+  vim.cmd("Age encrypt")
+  print("[INFO]: File encrypted.")
+end)
+
+if not success then
+  print("[CMD Error]: " .. tostring(err))
+  vim.cmd("cquit")
+end
+
 
 --[[
 vim.pack.add({
