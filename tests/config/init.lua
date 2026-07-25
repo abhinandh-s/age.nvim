@@ -30,7 +30,7 @@ require("lazy").setup({
     cmd = { "Age" },
     config = function()
       require('age').setup({
-        key_file = vim.fn.expand("keys.txt"),
+        key_file = vim.fn.expand("key.txt"),
       })
     end
 }
