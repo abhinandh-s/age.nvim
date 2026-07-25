@@ -23,8 +23,5 @@ jobs:
         run: |
           
           cd tests/config
-          ls tests/config
-          nvim --headless -u tests/config/init.lua +"qa!"
-          echo "====="
-          ls 
-          echo "====="
+          ls
+          nvim --headless -u init.lua +"qa!"
