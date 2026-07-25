@@ -19,10 +19,16 @@ jobs:
           neovim: true
           version: nightly
 
+      - name: ls before
+        run: ls
+
       - name: Run Age genkey test
         run: |
           cd tests/config
           nvim --headless -u init.lua +"qa!"
+
+      - name: ls after
+        run: ls
 
       #- name: cat Decrypted File
       #  run: |
