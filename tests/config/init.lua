@@ -45,6 +45,7 @@ require("lazy").setup({
 
 local success, err = pcall(function()
   vim.cmd("Age genkey")
+  print("[INFO]: Key generated.")
 end)
 
 if not success then
