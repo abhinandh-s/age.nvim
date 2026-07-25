@@ -1,8 +1,6 @@
 name: Test Plugin
 on:
   push:
-  #  paths:
-  #    - 'src/**'
   pull_request:
   workflow_dispatch:
 
@@ -19,6 +17,30 @@ jobs:
           neovim: true
           version: nightly
 
+      - name: ls before
+        run: |
+          cd tests/config
+          ls
+          stat secret.md
+
       - name: Run Age genkey test
         run: |
-          nvim --headless -h
+          cd tests/config
+          nvim --headless -u init.lua +"qa!"
+
+      - name: ls after
+        run: |
+          cd tests/config
+          ls
+          stat secret.md
+          stat secret.md.age
+
+      - name: cat Decrypted File
+        run: |
+          cd tests/config
+          cat secret.md
+       
+      - name: cat Encrypted File
+        run: |
+          cd tests/config
+          cat secret.md.age
