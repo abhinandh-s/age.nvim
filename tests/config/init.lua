@@ -27,6 +27,12 @@ require("lazy").setup({
   spec = {
     {
     'abhinandh-s/age.nvim',
+    build = [[
+    echo "Building age.nvim from source..."
+    cargo build --release --target-dir ./target
+    mkdir -p lua
+    mv target/release/libage.so lua/age.so
+  ]],
     cmd = { "Age" },
     config = function()
       require('age').setup({
