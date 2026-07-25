@@ -54,6 +54,7 @@ if not success then
 end
 
 local success, err = pcall(function()
+  vim.cmd("e tests/config/secret.md")
   vim.cmd("Age encrypt")
   print("[INFO]: File encrypted.")
 end)
