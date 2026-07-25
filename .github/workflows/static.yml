@@ -1,6 +1,5 @@
 name: Deploy Rust Docs to Pages
 
-name: Build and Test
 on:
   push:
     branches: ["master"]
