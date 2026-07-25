@@ -1,3 +1,4 @@
+vim.opt.rtp:prepend(vim.fn.stdpath("data") .. "/lazy/lazy.nvim")
 require("lazy")
 
 local success, err = pcall(function()
