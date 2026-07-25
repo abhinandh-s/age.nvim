@@ -1,3 +1,8 @@
+vim.opt.more = false     
+vim.opt.cmdheight = 50    
+vim.opt.shortmess:append("cIWs") -- Disables many prompts
+
+
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
