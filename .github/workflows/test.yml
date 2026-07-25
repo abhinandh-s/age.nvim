@@ -23,12 +23,10 @@ jobs:
         run: |
           cd tests/config
           nvim --headless -u init.lua +"qa!"
-          sleep 2
-          cat secret.md
 
-      - name: cat Decrypted File
-        run: |
-          cat secret.md
+      #- name: cat Decrypted File
+      #  run: |
+      #    cat secret.md
        
       - name: cat Encrypted File
         run: |
