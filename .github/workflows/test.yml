@@ -21,12 +21,16 @@ jobs:
 
       - name: Run Age genkey test
         run: |
-          
           cd tests/config
           ls
           nvim --headless -u init.lua +"qa!"
-          sleep 2
-          echo "== cat secret.md"
+
+      - name: cat Decrypted File
+        run: |
           cat secret.md
-          echo "== cat secret.md.age"
+       
+      - name: cat Encrypted File
+        run: |
           cat secret.md.age
+
+    
