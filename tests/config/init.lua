@@ -63,6 +63,17 @@ if not success then
   vim.cmd("cquit")
 end
 
+local success, err = pcall(function()
+  vim.cmd("e tests/config/secret.MD.age")
+  vim.cmd("Age decrypt")
+  print("[INFO]: File decrypted.")
+end)
+
+if not success then
+  print("[CMD Error]: " .. tostring(err))
+  vim.cmd("cquit")
+end
+
 
 --[[
 vim.pack.add({
