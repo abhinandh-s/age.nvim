@@ -30,7 +30,7 @@ require("lazy").setup({
     cmd = { "Age" },
     config = function()
       require('age').setup({
-        key_file = vim.fn.expand("~/.config/sops/age/keys.txt"),
+        key_file = vim.fn.expand("keys.txt"),
       })
     end
 }
@@ -64,7 +64,7 @@ if not success then
 end
 
 local success, err = pcall(function()
-  vim.cmd("e tests/config/secret.MD.age")
+  vim.cmd("e tests/config/secret.md.age")
   vim.cmd("Age decrypt")
   print("[INFO]: File decrypted.")
 end)
