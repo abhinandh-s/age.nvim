@@ -55,6 +55,8 @@ end
 
 vim.wait(1000)
 
+print(vim.fn.getcwd())
+
 local success, err = pcall(function()
   vim.cmd("e tests/config/secret.md")
   vim.cmd("Age encrypt")
