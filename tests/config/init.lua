@@ -53,6 +53,8 @@ if not success then
   vim.cmd("cquit")
 end
 
+vim.wait(1000)
+
 local success, err = pcall(function()
   vim.cmd("e tests/config/secret.md")
   vim.cmd("Age encrypt")
@@ -63,6 +65,8 @@ if not success then
   print("[CMD Error]: " .. tostring(err))
   vim.cmd("cquit")
 end
+
+vim.wait(1000)
 
 local success, err = pcall(function()
   vim.cmd("e tests/config/secret.md.age")
