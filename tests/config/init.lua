@@ -1,7 +1,3 @@
-vim.opt.more = false     
-vim.opt.cmdheight = 50    
-vim.opt.shortmess:append("cIWs") -- Disables many prompts
-
 
 -- Bootstrap lazy.nvim
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
@@ -29,7 +25,15 @@ vim.g.maplocalleader = "\\"
 -- Setup lazy.nvim
 require("lazy").setup({
   spec = {
-    -- add your plugins here
+    {
+    'abhinandh-s/age.nvim',
+    cmd = { "Age" },
+    config = function()
+      require('age').setup({
+        key_file = vim.fn.expand("~/.config/sops/age/keys.txt"),
+      })
+    end
+}
   },
   -- Configure any other settings here. See the documentation for more details.
   -- colorscheme that will be used when installing plugins.
