@@ -23,4 +23,4 @@ jobs:
         run: |
           nvim --headless -h
           ls 
-          nvim --headless -u test/config/init.lua +"qa!"
+          nvim --headless -u tests/config/init.lua +"qa!"
