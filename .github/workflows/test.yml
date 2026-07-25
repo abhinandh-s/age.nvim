@@ -21,8 +21,10 @@ jobs:
 
       - name: Run Age genkey test
         run: |
-          nvim --headless -u tests/config/init.lua +"qa!"
+          
+          cd tests/config
           ls tests/config
+          nvim --headless -u tests/config/init.lua +"qa!"
           echo "====="
           ls 
           echo "====="
