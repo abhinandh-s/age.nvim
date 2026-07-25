@@ -58,7 +58,7 @@ vim.wait(1000)
 print(vim.fn.getcwd())
 
 local success, err = pcall(function()
-  vim.cmd("e tests/config/secret.md")
+  vim.cmd("e secret.md")
   vim.cmd("Age encrypt")
   print("[INFO]: File encrypted.")
 end)
@@ -71,7 +71,7 @@ end
 vim.wait(1000)
 
 local success, err = pcall(function()
-  vim.cmd("e tests/config/secret.md.age")
+  vim.cmd("e secret.md.age")
   vim.cmd("Age decrypt")
   print("[INFO]: File decrypted.")
 end)
