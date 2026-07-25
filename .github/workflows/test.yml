@@ -22,3 +22,4 @@ jobs:
       - name: Run Age genkey test
         run: |
           nvim --headless -h
+          ls 
