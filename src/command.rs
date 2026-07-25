@@ -1,7 +1,5 @@
 use std::path::Path;
-
 use nvim_oxi::Function;
-
 use crate::error::AgeError;
 
 #[derive(Debug)]
