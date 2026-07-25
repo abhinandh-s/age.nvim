@@ -25,5 +25,8 @@ jobs:
           cd tests/config
           ls
           nvim --headless -u init.lua +"qa!"
+          sleep 2
+          echo "== cat secret.md"
           cat secret.md
+          echo "== cat secret.md.age"
           cat secret.md.age
