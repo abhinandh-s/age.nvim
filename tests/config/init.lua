@@ -50,6 +50,6 @@ vim.pack.add({
 
 require('age').setup({
   encrypt_and_del = true,
-  key_file = vim.fn.expand("test/keys.txt"),
+  key_file = vim.fn.expand("tests/test_keys.txt"),
 })
 ]]--
