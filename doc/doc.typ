@@ -1,13 +1,13 @@
 #import "@local/ui:0.1.0": *
 
+
+*Neovim plugin for encrypting and decrypting text files inside neovim using #link("https://github.com/FiloSottile/age")[age] with ease.*
+
 /*
-
-*Neovim plugin for encrypting and decrypting text files inside neovim using #link(https://github.com/FiloSottile/age)[age] with ease.*
-
 
 === Breaking Changes have been introduced in v.2.2.0 [2026-02-11]
 See the [Full Changelog](CHANGELOG.md#220---2026-02-11) for migration details and code examples.
-
+*/
 
 = Installation
 
@@ -49,7 +49,7 @@ Master branch supports Neovim version >= 0.11
   ...
 ```
 
-Install Age using your favorite plugin manager. For example, with #link(https://github.com/folke/lazy.nvim)[lazy.nvim]:
+Install Age using your favorite plugin manager. For example, with #link("https://github.com/folke/lazy.nvim")[lazy.nvim]:
 
 #alerts.warning[
 This utility can be required by other plugins as a dependency to load a secret from your dotfiles to pass to a plugin.
