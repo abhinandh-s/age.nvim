@@ -1,5 +1,7 @@
 #import "@local/ui:0.1.0": *
 
+/*
+
 *Neovim plugin for encrypting and decrypting text files inside neovim using #link(https://github.com/FiloSottile/age)[age] with ease.*
 
 
@@ -217,3 +219,6 @@ It features small explicit keys, no config options, and UNIX-style composability
     ]
   )
 )
+
+
+*/
