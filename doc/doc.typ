@@ -11,8 +11,7 @@ See the [Full Changelog](CHANGELOG.md#220---2026-02-11) for migration details an
 
 = Installation
 
-== neovim native package manager 
-
+#let native = [
 ```lua 
 vim.pack.add({
   'https://github.com/abhinandh-s/age.nvim',
@@ -23,9 +22,9 @@ require('age').setup({
   key_file = vim.fn.expand("~/.config/sops/age/keys.txt"),
 })
 ```
+]
 
-== lazy.nvim 
-
+#let lazy = [
 ```lua 
 {
     'abhinandh-s/age.nvim',
@@ -37,6 +36,18 @@ require('age').setup({
     end
 }
 ```
+]
+
+#codetabs(
+  (
+    name: "native package manager",
+    code: native,
+  ),
+  (
+    name: "lazy.nvim",
+    code: lazy,
+  ),
+)
 
 #alerts.warning[
 Master branch supports Neovim version >= 0.11
