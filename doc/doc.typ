@@ -196,6 +196,7 @@ return {
   -- trim whitespace if using for API tokens
   local secret = age.decrypt_to_string(path):gsub("%s+", "")
 ```
+*/
 
 #alerts.note[
 If you have any suggestions, please let me know.
@@ -219,6 +220,3 @@ It features small explicit keys, no config options, and UNIX-style composability
     ]
   )
 )
-
-
-*/
