@@ -101,7 +101,7 @@ Everything needed for encryption and decryption is handled within the plugin its
 
 #codetabs(
   (
-    name: "~/.config/nvim/lua/plugins/age.lua",
+    name: "age.lua",
     code: config,
   )
 )
