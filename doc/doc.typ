@@ -3,13 +3,9 @@
 
 *Neovim plugin for encrypting and decrypting text files inside neovim using #link("https://github.com/FiloSottile/age")[age] with ease.*
 
-/*
-
-=== Breaking Changes have been introduced in v.2.2.0 [2026-02-11]
-See the [Full Changelog](CHANGELOG.md#220---2026-02-11) for migration details and code examples.
-*/
-
 = Installation
+
+Install Age using your favorite plugin manager.
 
 #let native = [
 ```lua 
@@ -40,7 +36,7 @@ require('age').setup({
 
 #codetabs(
   (
-    name: "native package manager",
+    name: "vim.pack",
     code: native,
   ),
   (
@@ -49,18 +45,15 @@ require('age').setup({
   ),
 )
 
-#alerts.warning[
-Master branch supports Neovim version >= 0.11
-]
+Master branch supports Neovim version >= 0.11.
 
 ```lua
   ...  
   'abhinandh-s/age.nvim',
-  branch = "nvim-v10", -- pin branch for Neovim version 0.10
+  -- pin branch for Neovim version 0.10
+  branch = "nvim-v10",
   ...
 ```
-
-Install Age using your favorite plugin manager. For example, with #link("https://github.com/folke/lazy.nvim")[lazy.nvim]:
 
 #alerts.warning[
 This utility can be required by other plugins as a dependency to load a secret from your dotfiles to pass to a plugin.
@@ -85,16 +78,13 @@ Given below is the safest config implemention. Never hardcode private key.
 
 - *None*
 
-#alerts.note[
 `age.nvim` does not require the `age` CLI to be installed separately.
 Everything needed for encryption and decryption is handled within the plugin itself.
-]
 
-== config 
+== configuration
 
+#let config = [
 ```lua
--- ~/.config/nvim/lua/plugins/age.lua
-
 {
     'abhinandh-s/age.nvim',
     cmd = { "Age" },
@@ -107,6 +97,14 @@ Everything needed for encryption and decryption is handled within the plugin its
     end
 }
 ```
+]
+
+#codetabs(
+  (
+    name: "~/.config/nvim/lua/plugins/age.lua",
+    code: config,
+  )
+)
 
 = Usage
 
