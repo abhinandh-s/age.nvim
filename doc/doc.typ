@@ -145,6 +145,9 @@ age.nvim provides 3 apis -
 - `decrypt_to_string_with_identities` -- takes from file
 - `decrypt_from_string` -- takes from key file 
 
+*/
+
+
 ```lua 
 return {
   {
@@ -196,11 +199,12 @@ return {
   -- trim whitespace if using for API tokens
   local secret = age.decrypt_to_string(path):gsub("%s+", "")
 ```
-*/
 
 #alerts.note[
 If you have any suggestions, please let me know.
 ]
+
+= FAQs
 
 #accordion(
   (
