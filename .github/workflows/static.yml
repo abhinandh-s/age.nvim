@@ -29,7 +29,7 @@ jobs:
         uses: abhinandh-s/typst-ui-kit@master
 
       - name: Run typst bundle
-        run: typst compile main.typ dist --format bundle
+        run: typst compile doc/main.typ dist --format bundle
 
 
       - name: Set up Deno
