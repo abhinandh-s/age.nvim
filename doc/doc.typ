@@ -205,7 +205,7 @@ If you have any suggestions, please let me know.
 #accordion(
   (
     summary: "What is age?",
-    ctx: [#link(https://age-encryption.org/)[age] is a simple, modern and secure file encryption tool.
+    ctx: [#link("https://age-encryption.org/")[age] is a simple, modern and secure file encryption tool.
 
 It features small explicit keys, no config options, and UNIX-style composability.]
   ),
