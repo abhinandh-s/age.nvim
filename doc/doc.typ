@@ -81,7 +81,7 @@ Given below is the safest config implemention. Never hardcode private key.
 `age.nvim` does not require the `age` CLI to be installed separately.
 Everything needed for encryption and decryption is handled within the plugin itself.
 
-== configuration
+== Full Configuration
 
 #let config = [
 ```lua
