@@ -145,8 +145,6 @@ age.nvim provides 3 apis -
 - `decrypt_to_string_with_identities` -- takes from file
 - `decrypt_from_string` -- takes from key file 
 
-*/
-
 
 ```lua 
 return {
